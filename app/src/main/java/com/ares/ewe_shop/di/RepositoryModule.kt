@@ -2,8 +2,10 @@ package com.ares.ewe_shop.di
 
 import com.ares.ewe_shop.data.repository.AuthRepositoryImpl
 import com.ares.ewe_shop.data.repository.OrderRepositoryImpl
+import com.ares.ewe_shop.data.repository.ProductRepositoryImpl
 import com.ares.ewe_shop.domain.repository.AuthRepository
 import com.ares.ewe_shop.domain.repository.OrderRepository
+import com.ares.ewe_shop.domain.repository.ProductRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindOrderRepository(impl: OrderRepositoryImpl): OrderRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProductRepository(impl: ProductRepositoryImpl): ProductRepository
 }

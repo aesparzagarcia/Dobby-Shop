@@ -53,9 +53,13 @@ class AuthRepositoryImpl @Inject constructor(
             if (token.isNullOrBlank() || refresh.isNullOrBlank()) {
                 return AuthResult.Error("Respuesta inválida. Asegúrate de usar el teléfono de tu tienda o restaurante registrado en el panel web.")
             }
-            response.shop?.id?.let { shopId ->
-                sessionManager.saveSession(token, refresh, shopId)
-            } ?: sessionManager.saveSession(token, refresh, null)
+            val shop = response.shop
+            sessionManager.saveSession(
+                accessToken = token,
+                refreshToken = refresh,
+                shopId = shop?.id,
+                shopName = shop?.name
+            )
             sessionEventBus.resetExpiredGate()
             AuthResult.Success(Unit)
         } catch (e: HttpException) {

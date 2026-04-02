@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,21 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
     id("kotlinx-serialization")
+}
+
+/** Base URL del API (debe terminar en `/api/`). Opcional en `local.properties`: `ewe.api.base.url=...` */
+val eweApiBaseUrl: String = run {
+    val p = Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { p.load(it) }
+    val raw = p.getProperty("ewe.api.base.url")?.trim().orEmpty()
+    when {
+        raw.isEmpty() -> "http://10.0.2.2:3001/api/"
+        raw.endsWith("/api/") -> raw
+        raw.endsWith("/api") -> "$raw/"
+        raw.endsWith("/") -> "${raw}api/"
+        else -> "$raw/api/"
+    }
 }
 
 android {
@@ -22,8 +39,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Emulator: 10.0.2.2 = host machine's localhost
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3001/api/\"")
+        // Emulador: 10.0.2.2 = localhost del PC. En dispositivo físico define ewe.api.base.url en local.properties
+        buildConfigField("String", "BASE_URL", "\"$eweApiBaseUrl\"")
     }
 
     buildTypes {
@@ -99,6 +116,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation(libs.coil.compose)
 
     // Maps & Location
     implementation(libs.play.services.maps)

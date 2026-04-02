@@ -5,11 +5,17 @@ import com.ares.ewe_shop.data.remote.model.MarkPreparingRequest
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpRequest
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpResponse
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
+import com.ares.ewe_shop.data.remote.model.CreateShopProductRequest
+import com.ares.ewe_shop.data.remote.model.ShopProductDto
+import com.ares.ewe_shop.data.remote.model.UploadImageResponse
 import com.ares.ewe_shop.data.remote.model.VerifyOtpRequest
 import com.ares.ewe_shop.data.remote.model.VerifyOtpResponse
-import retrofit2.http.GET
-import retrofit2.http.PATCH
+import okhttp3.MultipartBody
 import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.Multipart
+import retrofit2.http.PATCH
+import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -40,4 +46,12 @@ interface DobbyShopApi {
 
     @PATCH("shop/orders/{id}/reject")
     suspend fun rejectOrder(@Path("id") orderId: String): AcceptRejectResponse
+
+    /** Crea un producto para la tienda del JWT (misma lógica que el panel, sin elegir otra tienda). */
+    @POST("shop/products")
+    suspend fun createShopProduct(@Body body: CreateShopProductRequest): ShopProductDto
+
+    @Multipart
+    @POST("upload/product-image")
+    suspend fun uploadProductImage(@Part file: MultipartBody.Part): UploadImageResponse
 }
