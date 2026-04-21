@@ -10,6 +10,7 @@ data class ShopProductDto(
     @SerializedName("imageUrls") val imageUrls: List<String> = emptyList(),
     @SerializedName("hasPromotion") val hasPromotion: Boolean = false,
     @SerializedName("discount") val discount: Int = 0,
+    @SerializedName("rate") val rate: Float = 0f,
     @SerializedName("isActive") val isActive: Boolean = true,
     @SerializedName("shop") val shop: ShopNameRef? = null
 )
