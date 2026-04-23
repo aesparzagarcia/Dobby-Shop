@@ -24,6 +24,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
 import com.ares.ewe_shop.presentation.ui.orders.OrdersScreen
@@ -47,8 +50,13 @@ sealed class MainTab(
 @Composable
 fun MainScreen(
     onOrderClick: (ShopOrderDto) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    /** Contador en SavedStateHandle de la ruta Main; al volver del detalle sube y dispara refresh en pedidos. */
+    ordersRefreshGeneration: StateFlow<Int>? = null,
 ) {
+    val ordersRefreshFlow = ordersRefreshGeneration ?: remember { MutableStateFlow(0) }
+    val ordersRefreshGen by ordersRefreshFlow.collectAsStateWithLifecycle(0)
+
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showCreateProduct by rememberSaveable { mutableStateOf(false) }
     var productCreatedMessage by remember { mutableStateOf<String?>(null) }
@@ -78,7 +86,10 @@ fun MainScreen(
                 )
             } else {
                 when (selectedTab) {
-                    0 -> OrdersScreen(onOrderClick = onOrderClick)
+                    0 -> OrdersScreen(
+                        onOrderClick = onOrderClick,
+                        ordersRefreshGeneration = ordersRefreshGen,
+                    )
                     1 -> ShopProductsScreen(
                         onNuevoClick = {
                             productBeingEdited = null

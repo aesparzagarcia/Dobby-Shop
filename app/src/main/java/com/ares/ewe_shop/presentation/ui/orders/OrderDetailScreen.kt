@@ -1,5 +1,7 @@
 package com.ares.ewe_shop.presentation.ui.orders
 
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -127,6 +129,9 @@ fun OrderDetailScreen(
     var showPrepTimePicker by rememberSaveable { mutableStateOf(false) }
     /** Total prep duration in minutes (from TimePicker as hours + minutes of duration). */
     var estimatedPrepMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    // El gesto / botón atrás del sistema debe usar el mismo onBack que la flecha (refrescar lista en Nav).
+    BackHandler(onBack = onBack)
 
     LaunchedEffect(Unit) {
         viewModel.loadOrder(null)
@@ -403,13 +408,17 @@ fun OrderDetailScreen(
                         }
                     }
 
-                    order.deliveryMan?.let { dm ->
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Repartidor: ${dm.name ?: "—"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Log.d("ArmandoLog","Status: ${order.status}")
+
+                    if (order.status in setOf("ASSIGNED", "ON_DELIVERY", "DELIVERED")) {
+                        order.deliveryMan?.let { dm ->
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Repartidor: ${dm.name ?: "—"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

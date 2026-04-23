@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -16,6 +17,19 @@ import com.ares.ewe_shop.presentation.ui.main.MainScreen
 import com.ares.ewe_shop.presentation.ui.orders.OrderDetailScreen
 import com.ares.ewe_shop.presentation.ui.splash.SplashScreen
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.flow.StateFlow
+
+/** Se incrementa al volver del detalle para que [OrdersScreen] recargue la lista. */
+private const val KEY_ORDERS_REFRESH_GEN = "orders_list_refresh_gen"
+
+private fun incrementMainOrdersRefreshGen(navController: NavController) {
+    runCatching {
+        navController.getBackStackEntry(DobbyShopScreens.Main).savedStateHandle
+    }.getOrNull()?.let { handle ->
+        val next = (handle.get<Int>(KEY_ORDERS_REFRESH_GEN) ?: 0) + 1
+        handle[KEY_ORDERS_REFRESH_GEN] = next
+    }
+}
 
 @Composable
 fun DobbyShopNavigation() {
@@ -76,7 +90,9 @@ fun DobbyShopNavigation() {
                 }
             )
         }
-        composable(DobbyShopScreens.Main) {
+        composable(DobbyShopScreens.Main) { backStackEntry ->
+            val ordersRefreshGeneration: StateFlow<Int> =
+                backStackEntry.savedStateHandle.getStateFlow(KEY_ORDERS_REFRESH_GEN, 0)
             MainScreen(
                 onOrderClick = { order ->
                     navController.navigate(DobbyShopScreens.orderDetail(order.id))
@@ -85,16 +101,22 @@ fun DobbyShopNavigation() {
                     navController.navigate(DobbyShopScreens.Phone) {
                         popUpTo(DobbyShopScreens.Main) { inclusive = true }
                     }
-                }
+                },
+                ordersRefreshGeneration = ordersRefreshGeneration,
             )
         }
         composable(
             route = DobbyShopScreens.OrderDetail,
             arguments = listOf(navArgument("orderId") { type = NavType.StringType })
         ) {
+            // Misma lógica al salir por flecha, gesto atrás o tras aceptar/rechazar: refrescar lista en Main.
+            val popDetailAndRefreshOrders: () -> Unit = {
+                incrementMainOrdersRefreshGen(navController)
+                navController.popBackStack()
+            }
             OrderDetailScreen(
-                onBack = { navController.popBackStack() },
-                onAcceptOrRejectSuccess = { navController.popBackStack() }
+                onBack = popDetailAndRefreshOrders,
+                onAcceptOrRejectSuccess = popDetailAndRefreshOrders,
             )
         }
     }

@@ -218,7 +218,7 @@ private fun ShopProductsFloatingSearchCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 4.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.cardColors(
@@ -233,7 +233,7 @@ private fun ShopProductsFloatingSearchCard(
                 .padding(horizontal = 4.dp, vertical = 2.dp),
             placeholder = {
                 Text(
-                    "Buscar productos",
+                    "Buscar",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },

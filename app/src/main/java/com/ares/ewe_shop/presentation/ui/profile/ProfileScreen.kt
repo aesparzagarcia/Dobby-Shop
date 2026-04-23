@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,10 +56,12 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scroll = rememberScrollState()
 
+    // Misma razón que Productos: la NavigationBar está en MainScreen; sin esto sobra padding inferior.
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             TopAppBar(
-                title = { Text("Perfil · Restaurant Score") },
+                title = {  },
                 actions = {
                     TextButton(
                         onClick = { viewModel.loadProfile() },
@@ -86,7 +89,7 @@ fun ProfileScreen(
                     modifier = modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(24.dp),
+                        .padding(start = 24.dp, end = 24.dp, top = 24.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -105,7 +108,7 @@ fun ProfileScreen(
                 val p = uiState.profile
                 Column(
                     modifier = modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .padding(padding)
                         .verticalScroll(scroll)
                         .padding(20.dp),

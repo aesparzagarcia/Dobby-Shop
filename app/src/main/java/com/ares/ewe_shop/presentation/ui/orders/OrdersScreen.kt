@@ -82,10 +82,16 @@ private fun statusLabel(status: String): String = when (status) {
 @Composable
 fun OrdersScreen(
     onOrderClick: (ShopOrderDto) -> Unit,
+    /** Copiado desde el StateFlow de Main vía collectAsStateWithLifecycle; al cambiar se recarga la lista. */
+    ordersRefreshGeneration: Int = 0,
     viewModel: OrdersViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(ordersRefreshGeneration) {
+        if (ordersRefreshGeneration > 0) viewModel.loadOrders()
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { msg ->
