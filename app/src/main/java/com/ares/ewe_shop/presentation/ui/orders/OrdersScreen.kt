@@ -100,10 +100,24 @@ fun OrdersScreen(
         }
     }
 
+    val shopLabel = uiState.shopDisplayName?.takeIf { it.isNotBlank() } ?: "Tu tienda"
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Pedidos") },
+                title = {
+                    Column {
+                        Text(
+                            text = shopLabel,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Pedidos",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 actions = {
                     IconButton(
                         onClick = { viewModel.refresh() },

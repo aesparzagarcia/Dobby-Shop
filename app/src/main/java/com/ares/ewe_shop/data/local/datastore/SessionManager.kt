@@ -42,6 +42,10 @@ class SessionManager @Inject constructor(
         prefs[Keys.SHOP_NAME]
     }
 
+    val shopId: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.USER_ID]
+    }
+
     /** Solo rota tokens (mantiene tienda id/nombre). */
     suspend fun saveSession(accessToken: String, refreshToken: String) {
         context.dataStore.edit { prefs ->

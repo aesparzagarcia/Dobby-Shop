@@ -122,6 +122,7 @@ private fun formatOrderDate(createdAt: String): String {
 fun OrderDetailScreen(
     onBack: () -> Unit,
     onAcceptOrRejectSuccess: () -> Unit,
+    onReadyForPickupSuccess: () -> Unit,
     viewModel: OrderDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -392,7 +393,7 @@ fun OrderDetailScreen(
                     if (order.status == "PREPARING") {
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
-                            onClick = { viewModel.markReadyForPickup() },
+                            onClick = { viewModel.markReadyForPickup(onReadyForPickupSuccess) },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !uiState.isReadyForPickup
                         ) {

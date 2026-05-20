@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,21 +5,7 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
     id("kotlinx-serialization")
-}
-
-/** Base URL del API (debe terminar en `/api/`). Opcional en `local.properties`: `ewe.api.base.url=...` */
-val eweApiBaseUrl: String = run {
-    val p = Properties()
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { p.load(it) }
-    val raw = p.getProperty("ewe.api.base.url")?.trim().orEmpty()
-    when {
-        raw.isEmpty() -> "http://10.0.2.2:3001/api/"
-        raw.endsWith("/api/") -> raw
-        raw.endsWith("/api") -> "$raw/"
-        raw.endsWith("/") -> "${raw}api/"
-        else -> "$raw/api/"
-    }
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -39,8 +23,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Emulador: 10.0.2.2 = localhost del PC. En dispositivo físico define ewe.api.base.url en local.properties
-        buildConfigField("String", "BASE_URL", "\"$eweApiBaseUrl\"")
+        // Local API: default Mac LAN IP for physical device. Emulator: DEV_API_HOST=10.0.2.2 in gradle.properties
+        // USB + adb reverse tcp:3001 tcp:3001 → DEV_API_HOST=127.0.0.1. Path must end with /api/.
+        val devApiHost = (project.findProperty("DEV_API_HOST") as String?)?.trim()?.takeIf { it.isNotBlank() }
+            ?: "192.168.1.4"
+        val devApiPort = (project.findProperty("DEV_API_PORT") as String?)?.trim()?.takeIf { it.isNotBlank() }
+            ?: "3001"
+        buildConfigField("String", "BASE_URL", "\"http://$devApiHost:$devApiPort/api/\"")
     }
 
     buildTypes {
@@ -119,9 +108,15 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
 
     implementation(libs.coil.compose)
+    implementation(libs.lottie.compose)
 
     // Maps & Location
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
 }

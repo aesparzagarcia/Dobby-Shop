@@ -8,6 +8,7 @@ object DobbyShopScreens {
     const val Otp = "otp/{phone}"
     const val Main = "main"
     const val OrderDetail = "orderDetail/{orderId}"
+    const val SearchingDriver = "searchingDriver"
 
     fun otp(phone: String) = "otp/${Uri.encode(phone)}"
     fun orderDetail(orderId: String) = "orderDetail/${Uri.encode(orderId)}"

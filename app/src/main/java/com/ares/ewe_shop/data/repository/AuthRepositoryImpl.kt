@@ -10,6 +10,7 @@ import com.ares.ewe_shop.data.remote.model.ShopRequestOtpRequest
 import com.ares.ewe_shop.data.remote.model.VerifyOtpRequest
 import com.ares.ewe_shop.domain.model.AuthResult
 import com.ares.ewe_shop.domain.repository.AuthRepository
+import com.ares.ewe_shop.realtime.ShopRealtimeCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
@@ -20,6 +21,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val sessionManager: SessionManager,
     private val shopTokenRefreshService: ShopTokenRefreshService,
     private val sessionEventBus: SessionEventBus,
+    private val shopRealtimeCoordinator: ShopRealtimeCoordinator,
 ) : AuthRepository {
 
     override val isLoggedIn: Flow<Boolean> = sessionManager.isLoggedIn
@@ -61,6 +63,7 @@ class AuthRepositoryImpl @Inject constructor(
                 shopName = shop?.name
             )
             sessionEventBus.resetExpiredGate()
+            shopRealtimeCoordinator.onSessionReady()
             AuthResult.Success(Unit)
         } catch (e: HttpException) {
             val message = parseErrorBody(e) ?: "Código inválido o expirado"
@@ -71,6 +74,7 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        shopRealtimeCoordinator.onLogout()
         sessionManager.clearSession()
     }
 
@@ -81,6 +85,8 @@ class AuthRepositoryImpl @Inject constructor(
             ShopLaunchRefreshOutcome.Skipped,
             ShopLaunchRefreshOutcome.Refreshed,
             ShopLaunchRefreshOutcome.Unchanged -> true
+        }.also { ok ->
+            if (ok) shopRealtimeCoordinator.onSessionReady()
         }
     }
 

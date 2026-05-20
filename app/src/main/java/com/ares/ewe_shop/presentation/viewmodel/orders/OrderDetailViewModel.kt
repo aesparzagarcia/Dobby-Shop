@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.domain.repository.OrderRepository
+import com.ares.ewe_shop.realtime.OrderRealtimeBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,7 @@ data class OrderDetailUiState(
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    orderRealtimeBus: OrderRealtimeBus,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -33,6 +35,14 @@ class OrderDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(OrderDetailUiState())
     val uiState: StateFlow<OrderDetailUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            orderRealtimeBus.refreshOrders.collect {
+                loadOrder(null)
+            }
+        }
+    }
 
     fun loadOrder(ordersFromList: List<ShopOrderDto>?) {
         val order = ordersFromList?.firstOrNull { it.id == orderId }
@@ -100,7 +110,7 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    fun markReadyForPickup() {
+    fun markReadyForPickup(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isReadyForPickup = true, errorMessage = null)
             orderRepository.markOrderReadyForPickup(orderId)
@@ -108,8 +118,8 @@ class OrderDetailViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         order = _uiState.value.order?.copy(status = "READY_FOR_PICKUP"),
                         isReadyForPickup = false,
-                        actionSuccess = true
                     )
+                    onSuccess()
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(

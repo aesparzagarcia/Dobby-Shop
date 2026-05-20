@@ -10,6 +10,7 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -55,7 +56,7 @@ class ShopTokenRefreshService @Inject constructor(
         if (refresh.isNullOrBlank()) {
             return@withLock ShopCoordinatorResult.NoRefreshStored
         }
-        when (val r = withContext(Dispatchers.IO) { executeRefresh(refresh) }) {
+        when (val r = runShopRefreshWithRetries(sessionManager, refresh)) {
             is HttpRefreshResult.Success -> {
                 sessionManager.saveSession(r.accessToken, r.refreshToken)
                 ShopCoordinatorResult.NewTokens(r.accessToken)
@@ -71,7 +72,7 @@ class ShopTokenRefreshService @Inject constructor(
             if (refresh.isNullOrBlank()) {
                 return@withLock ShopLaunchRefreshOutcome.Skipped
             }
-            when (val r = withContext(Dispatchers.IO) { executeRefresh(refresh) }) {
+            when (val r = runShopRefreshWithRetries(sessionManager, refresh)) {
                 is HttpRefreshResult.Success -> {
                     sessionManager.saveSession(r.accessToken, r.refreshToken)
                     ShopLaunchRefreshOutcome.Refreshed
@@ -83,6 +84,34 @@ class ShopTokenRefreshService @Inject constructor(
                 HttpRefreshResult.TransientFailure -> ShopLaunchRefreshOutcome.Unchanged
             }
         }
+
+    /**
+     * Si [auth/shop/refresh] responde 401/403, reintenta tras un breve delay y vuelve a leer el
+     * refresh en DataStore (p. ej. otra petición pudo rotar tokens). Solo entonces se considera
+     * sesión muerta.
+     */
+    private suspend fun runShopRefreshWithRetries(
+        sessionManager: SessionManager,
+        initialRefresh: String,
+    ): HttpRefreshResult {
+        repeat(SHOP_REFRESH_ATTEMPTS) { attempt ->
+            val refresh = if (attempt == 0) {
+                initialRefresh
+            } else {
+                sessionManager.refreshToken.first().orEmpty()
+            }
+            if (refresh.isBlank()) return HttpRefreshResult.SessionInvalid
+            when (val r = withContext(Dispatchers.IO) { executeRefresh(refresh) }) {
+                is HttpRefreshResult.Success -> return r
+                HttpRefreshResult.TransientFailure -> return r
+                HttpRefreshResult.SessionInvalid -> {
+                    if (attempt == SHOP_REFRESH_ATTEMPTS - 1) return HttpRefreshResult.SessionInvalid
+                    delay(SHOP_REFRESH_RETRY_BASE_MS * (attempt + 1))
+                }
+            }
+        }
+        return HttpRefreshResult.SessionInvalid
+    }
 
     private fun executeRefresh(refresh: String): HttpRefreshResult {
         val url = BuildConfig.BASE_URL.trimEnd('/') + "/auth/shop/refresh"
@@ -127,5 +156,10 @@ class ShopTokenRefreshService @Inject constructor(
         data class Success(val accessToken: String, val refreshToken: String) : HttpRefreshResult
         data object SessionInvalid : HttpRefreshResult
         data object TransientFailure : HttpRefreshResult
+    }
+
+    private companion object {
+        private const val SHOP_REFRESH_ATTEMPTS = 3
+        private const val SHOP_REFRESH_RETRY_BASE_MS = 300L
     }
 }

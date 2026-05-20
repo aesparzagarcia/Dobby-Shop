@@ -1,6 +1,8 @@
 package com.ares.ewe_shop.data.remote.api
 
 import com.ares.ewe_shop.data.remote.model.AcceptRejectResponse
+import com.ares.ewe_shop.data.remote.model.FirebaseTokenResponse
+import com.ares.ewe_shop.data.remote.model.RegisterPushDeviceRequest
 import com.ares.ewe_shop.data.remote.model.MarkPreparingRequest
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpRequest
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpResponse
@@ -13,6 +15,7 @@ import com.ares.ewe_shop.data.remote.model.VerifyOtpRequest
 import com.ares.ewe_shop.data.remote.model.VerifyOtpResponse
 import okhttp3.MultipartBody
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
@@ -30,6 +33,15 @@ interface DobbyShopApi {
     /** Shop login: verify OTP and get token for the Shop (not the generic auth/verify-otp). */
     @POST("auth/shop/verify-otp")
     suspend fun verifyOtpShop(@Body body: VerifyOtpRequest): VerifyOtpResponse
+
+    @POST("shop/push-device")
+    suspend fun registerPushDevice(@Body body: RegisterPushDeviceRequest)
+
+    @DELETE("shop/push-device")
+    suspend fun unregisterPushDevice()
+
+    @POST("shop/firebase-token")
+    suspend fun getFirebaseCustomToken(): FirebaseTokenResponse
 
     @GET("shop/profile")
     suspend fun getShopProfile(): ShopProfileDto

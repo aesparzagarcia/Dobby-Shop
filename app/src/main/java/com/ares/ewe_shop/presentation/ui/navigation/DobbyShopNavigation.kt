@@ -15,6 +15,7 @@ import com.ares.ewe_shop.presentation.ui.auth.otp.OtpScreen
 import com.ares.ewe_shop.presentation.ui.auth.phone.PhoneScreen
 import com.ares.ewe_shop.presentation.ui.main.MainScreen
 import com.ares.ewe_shop.presentation.ui.orders.OrderDetailScreen
+import com.ares.ewe_shop.presentation.ui.orders.SearchingDriverScreen
 import com.ares.ewe_shop.presentation.ui.splash.SplashScreen
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.StateFlow
@@ -117,6 +118,19 @@ fun DobbyShopNavigation() {
             OrderDetailScreen(
                 onBack = popDetailAndRefreshOrders,
                 onAcceptOrRejectSuccess = popDetailAndRefreshOrders,
+                onReadyForPickupSuccess = {
+                    incrementMainOrdersRefreshGen(navController)
+                    navController.navigate(DobbyShopScreens.SearchingDriver) {
+                        popUpTo(DobbyShopScreens.Main) { inclusive = false }
+                    }
+                },
+            )
+        }
+        composable(DobbyShopScreens.SearchingDriver) {
+            SearchingDriverScreen(
+                onNavigateHome = {
+                    navController.popBackStack(DobbyShopScreens.Main, false)
+                }
             )
         }
     }
