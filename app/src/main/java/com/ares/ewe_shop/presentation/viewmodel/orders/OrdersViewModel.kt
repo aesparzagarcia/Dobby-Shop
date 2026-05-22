@@ -15,13 +15,28 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class OrderStats(
+    val total: Int = 0,
+    val pending: Int = 0,
+    val preparing: Int = 0,
+    val delivered: Int = 0,
+)
+
 data class OrdersUiState(
     val shopDisplayName: String? = null,
     val orders: List<ShopOrderDto> = emptyList(),
+    val orderStats: OrderStats = OrderStats(),
     val selectedStatusFilter: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isRefreshing: Boolean = false
+)
+
+private fun computeOrderStats(orders: List<ShopOrderDto>): OrderStats = OrderStats(
+    total = orders.size,
+    pending = orders.count { it.status == "PENDING" },
+    preparing = orders.count { it.status == "PREPARING" },
+    delivered = orders.count { it.status == "DELIVERED" },
 )
 
 @HiltViewModel
@@ -49,16 +64,26 @@ class OrdersViewModel @Inject constructor(
 
     fun loadOrders() {
         viewModelScope.launch {
+            val filter = _uiState.value.selectedStatusFilter
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            orderRepository.getOrders(_uiState.value.selectedStatusFilter)
+            val ordersResult = orderRepository.getOrders(filter)
+            val statsResult = orderRepository.getOrders(null)
+            ordersResult
                 .onSuccess { list ->
-                    _uiState.value = _uiState.value.copy(orders = list, isLoading = false, isRefreshing = false)
+                    val stats = statsResult.getOrNull()?.let(::computeOrderStats)
+                        ?: computeOrderStats(list)
+                    _uiState.value = _uiState.value.copy(
+                        orders = list,
+                        orderStats = stats,
+                        isLoading = false,
+                        isRefreshing = false,
+                    )
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         errorMessage = e.message ?: "Error al cargar los pedidos",
                         isLoading = false,
-                        isRefreshing = false
+                        isRefreshing = false,
                     )
                 }
         }
@@ -66,10 +91,19 @@ class OrdersViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
+            val filter = _uiState.value.selectedStatusFilter
             _uiState.value = _uiState.value.copy(isRefreshing = true)
-            orderRepository.getOrders(_uiState.value.selectedStatusFilter)
+            val ordersResult = orderRepository.getOrders(filter)
+            val statsResult = orderRepository.getOrders(null)
+            ordersResult
                 .onSuccess { list ->
-                    _uiState.value = _uiState.value.copy(orders = list, isRefreshing = false)
+                    val stats = statsResult.getOrNull()?.let(::computeOrderStats)
+                        ?: computeOrderStats(list)
+                    _uiState.value = _uiState.value.copy(
+                        orders = list,
+                        orderStats = stats,
+                        isRefreshing = false,
+                    )
                 }
                 .onFailure {
                     _uiState.value = _uiState.value.copy(isRefreshing = false)

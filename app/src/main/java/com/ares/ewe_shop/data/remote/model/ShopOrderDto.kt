@@ -14,8 +14,13 @@ data class ShopOrderDto(
     @SerializedName("deliveryAddress") val deliveryAddress: String?,
     @SerializedName("createdAt") val createdAt: String,
     @SerializedName("customerName") val customerName: String?,
+    @SerializedName("customerLastName") val customerLastName: String? = null,
     @SerializedName("customerEmail") val customerEmail: String?,
     @SerializedName("estimatedPreparationMinutes") val estimatedPreparationMinutes: Int? = null,
     @SerializedName("items") val items: List<ShopOrderItemDto>,
     @SerializedName("deliveryMan") val deliveryMan: DeliveryManDto?
 )
+
+/** Suma de líneas de producto (sin costo de envío). */
+fun ShopOrderDto.productsSubtotal(): Double =
+    items.sumOf { it.price * it.quantity }

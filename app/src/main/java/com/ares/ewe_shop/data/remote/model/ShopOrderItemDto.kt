@@ -6,5 +6,6 @@ data class ShopOrderItemDto(
     @SerializedName("productId") val productId: String,
     @SerializedName("productName") val productName: String?,
     @SerializedName("quantity") val quantity: Int,
-    @SerializedName("price") val price: Double
+    @SerializedName("price") val price: Double,
+    @SerializedName("imageUrl") val imageUrl: String? = null,
 )
