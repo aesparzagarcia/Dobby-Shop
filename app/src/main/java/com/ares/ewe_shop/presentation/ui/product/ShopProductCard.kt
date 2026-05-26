@@ -10,29 +10,32 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ares.ewe_shop.core.theme.DobbyShopColors
 import com.ares.ewe_shop.core.util.absoluteUploadUrl
 
-/**
- * Tarjeta alineada con [com.ares.ewe.presentation.ui.main.home.UniversalProductCard] en Dobby,
- * sin el control de carrito (esta lista es para el comercio).
- */
 @Composable
 fun ShopProductCard(
     name: String,
@@ -42,8 +45,10 @@ fun ShopProductCard(
     hasPromotion: Boolean,
     discount: Int,
     isActive: Boolean,
+    categoryLabel: String? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
+    onMenuClick: () -> Unit = onClick,
 ) {
     val validDiscount = discount.coerceIn(0, 100)
     val showPromotion = hasPromotion && validDiscount > 0
@@ -55,20 +60,20 @@ fun ShopProductCard(
             .fillMaxWidth()
             .alpha(cardAlpha)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DobbyShopColors.Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 6.dp),
+                .padding(bottom = 10.dp),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.08f)
-                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .background(Color.White),
                 contentAlignment = Alignment.Center,
             ) {
@@ -83,31 +88,47 @@ fun ShopProductCard(
                 } else {
                     Text(
                         text = name.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DobbyShopColors.Purple.copy(alpha = 0.45f),
+                    )
+                }
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(32.dp)
+                        .background(DobbyShopColors.Surface.copy(alpha = 0.92f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreHoriz,
+                        contentDescription = "Opciones",
+                        tint = DobbyShopColors.TextSecondary,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 if (showPromotion) {
                     Row(
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(end = 6.dp, top = 6.dp, bottom = 6.dp)
-                            .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
-                            .background(androidx.compose.ui.graphics.Color(0xFFFFE34D))
-                            .padding(horizontal = 6.dp, vertical = 3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFFFE34D))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "-$validDiscount%",
-                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 12.sp,
+                            color = DobbyShopColors.TextPrimary,
                         )
                         Text(
                             text = "$${String.format("%.2f", price)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 11.sp,
+                            color = DobbyShopColors.TextSecondary,
                             textDecoration = TextDecoration.LineThrough,
                         )
                     }
@@ -116,39 +137,70 @@ fun ShopProductCard(
                     Text(
                         text = "Pausado",
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .background(DobbyShopColors.RedLight)
                             .padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DobbyShopColors.RedDark,
                     )
                 }
             }
 
             Text(
                 text = "$${String.format("%.2f", discountedPrice)}",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 6.dp, start = 6.dp),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = DobbyShopColors.TextPrimary,
+                modifier = Modifier.padding(top = 10.dp, start = 10.dp, end = 10.dp),
             )
-
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = DobbyShopColors.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp, start = 6.dp),
+                modifier = Modifier.padding(top = 2.dp, start = 10.dp, end = 10.dp),
             )
             Row(
-                modifier = Modifier.padding(top = 4.dp, start = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp, start = 10.dp, end = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                RatingDisplay(rate = rate)
+                ProductRatingDisplay(rate = rate)
+                categoryLabel?.let { label ->
+                    Text(
+                        text = label,
+                        fontSize = 11.sp,
+                        color = DobbyShopColors.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun ProductRatingDisplay(rate: Float) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "★",
+            fontSize = 14.sp,
+            color = DobbyShopColors.Purple,
+        )
+        Text(
+            text = String.format("%.1f", rate.coerceIn(0f, 5f)),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = DobbyShopColors.TextSecondary,
+            modifier = Modifier.padding(start = 4.dp),
+        )
     }
 }

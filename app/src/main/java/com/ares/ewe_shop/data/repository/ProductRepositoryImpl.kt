@@ -19,9 +19,9 @@ class ProductRepositoryImpl @Inject constructor(
     private val api: DobbyShopApi
 ) : ProductRepository {
 
-    override suspend fun getShopProducts(): Result<List<ShopProductDto>> {
+    override suspend fun getShopProducts(category: String?): Result<List<ShopProductDto>> {
         return try {
-            Result.success(api.getShopProducts())
+            Result.success(api.getShopProducts(category))
         } catch (e: HttpException) {
             Result.failure(Exception(parseErrorBody(e) ?: "Error al cargar los productos"))
         } catch (e: Exception) {

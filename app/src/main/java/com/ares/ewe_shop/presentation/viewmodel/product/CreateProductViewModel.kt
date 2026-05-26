@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.model.CreateShopProductRequest
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
+import com.ares.ewe_shop.domain.model.ShopProductCategory
 import com.ares.ewe_shop.domain.repository.ProductRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Locale
@@ -18,7 +19,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val MAX_PHOTOS = 3
+private const val MAX_PHOTOS = 5
+private const val MAX_DESCRIPTION_LENGTH = 200
 
 private const val KEY_DRAFT_NAME = "draft_product_name"
 private const val KEY_DRAFT_DESCRIPTION = "draft_product_description"
@@ -26,6 +28,7 @@ private const val KEY_DRAFT_PRICE = "draft_product_price"
 private const val KEY_DRAFT_HAS_PROMO = "draft_product_has_promo"
 private const val KEY_DRAFT_DISCOUNT = "draft_product_discount"
 private const val KEY_DRAFT_ACTIVE = "draft_product_active"
+private const val KEY_DRAFT_CATEGORY = "draft_product_category"
 private const val KEY_DRAFT_IMAGE_URLS = "draft_product_image_urls"
 
 data class CreateProductUiState(
@@ -38,6 +41,7 @@ data class CreateProductUiState(
     val hasPromotion: Boolean = false,
     val discountText: String = "0",
     val isActive: Boolean = true,
+    val category: String = ShopProductCategory.DEFAULT,
     val imageUrls: List<String> = emptyList(),
     val isSubmitting: Boolean = false,
     val isUploadingImage: Boolean = false,
@@ -72,6 +76,7 @@ class CreateProductViewModel @Inject constructor(
             hasPromotion = savedStateHandle[KEY_DRAFT_HAS_PROMO] ?: false,
             discountText = savedStateHandle[KEY_DRAFT_DISCOUNT] ?: "0",
             isActive = savedStateHandle[KEY_DRAFT_ACTIVE] ?: true,
+            category = savedStateHandle[KEY_DRAFT_CATEGORY] ?: ShopProductCategory.DEFAULT,
             imageUrls = urls,
         )
     }
@@ -102,6 +107,8 @@ class CreateProductViewModel @Inject constructor(
             hasPromotion = product.hasPromotion,
             discountText = product.discount.coerceIn(0, 100).toString(),
             isActive = product.isActive,
+            category = product.category.takeIf { ShopProductCategory.isValid(it) }
+                ?: ShopProductCategory.DEFAULT,
             imageUrls = product.imageUrls,
             errorMessage = null,
             successMessage = null,
@@ -123,6 +130,7 @@ class CreateProductViewModel @Inject constructor(
         savedStateHandle[KEY_DRAFT_HAS_PROMO] = s.hasPromotion
         savedStateHandle[KEY_DRAFT_DISCOUNT] = s.discountText
         savedStateHandle[KEY_DRAFT_ACTIVE] = s.isActive
+        savedStateHandle[KEY_DRAFT_CATEGORY] = s.category
         savedStateHandle[KEY_DRAFT_IMAGE_URLS] = ArrayList(s.imageUrls)
     }
 
@@ -133,6 +141,7 @@ class CreateProductViewModel @Inject constructor(
         savedStateHandle.remove<Boolean>(KEY_DRAFT_HAS_PROMO)
         savedStateHandle.remove<String>(KEY_DRAFT_DISCOUNT)
         savedStateHandle.remove<Boolean>(KEY_DRAFT_ACTIVE)
+        savedStateHandle.remove<String>(KEY_DRAFT_CATEGORY)
         savedStateHandle.remove<ArrayList<String>>(KEY_DRAFT_IMAGE_URLS)
     }
 
@@ -151,12 +160,14 @@ class CreateProductViewModel @Inject constructor(
     }
 
     fun onNameChange(v: String) = updateDraft { it.copy(name = v) }
-    fun onDescriptionChange(v: String) = updateDraft { it.copy(description = v) }
+    fun onDescriptionChange(v: String) =
+        updateDraft { it.copy(description = v.take(MAX_DESCRIPTION_LENGTH)) }
     fun onPriceChange(v: String) = updateDraft { it.copy(priceText = v) }
     fun onHasPromotionChange(v: Boolean) =
         updateDraft { it.copy(hasPromotion = v, discountText = if (v) it.discountText else "0") }
     fun onDiscountChange(v: String) = updateDraft { it.copy(discountText = v.filter { ch -> ch.isDigit() }) }
     fun onIsActiveChange(v: Boolean) = updateDraft { it.copy(isActive = v) }
+    fun onCategoryChange(category: String) = updateDraft { it.copy(category = category) }
 
     fun removeImageAt(index: Int) {
         updateDraft { s ->
@@ -210,6 +221,10 @@ class CreateProductViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "El descuento debe estar entre 0 y 100") }
             return
         }
+        if (!ShopProductCategory.isValid(s.category)) {
+            _uiState.update { it.copy(errorMessage = "Selecciona una categoría") }
+            return
+        }
         val body = CreateShopProductRequest(
             name = name,
             description = s.description.trim().ifEmpty { null },
@@ -217,7 +232,8 @@ class CreateProductViewModel @Inject constructor(
             imageUrls = s.imageUrls,
             hasPromotion = s.hasPromotion,
             discount = if (s.hasPromotion) discount else 0,
-            isActive = s.isActive
+            isActive = s.isActive,
+            category = s.category.trim().lowercase(),
         )
         val editingId = s.editingProductId
         viewModelScope.launch {

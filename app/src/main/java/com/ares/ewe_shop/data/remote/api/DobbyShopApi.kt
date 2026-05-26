@@ -65,7 +65,9 @@ interface DobbyShopApi {
     suspend fun rejectOrder(@Path("id") orderId: String): AcceptRejectResponse
 
     @GET("shop/products")
-    suspend fun getShopProducts(): List<ShopProductDto>
+    suspend fun getShopProducts(
+        @Query("category") category: String? = null,
+    ): List<ShopProductDto>
 
     /** Crea un producto para la tienda del JWT (misma lógica que el panel, sin elegir otra tienda). */
     @POST("shop/products")

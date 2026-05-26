@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inventory2
@@ -29,10 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ares.ewe_shop.core.theme.DobbyShopColors
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,8 +60,9 @@ sealed class MainTab(
 }
 
 /**
- * El teclado usa [adjustNothing] a nivel Activity para que la ventana no encoja y la barra inferior
- * no suba. Solo el área central lleva [imePadding] para desplazar el contenido sobre el IME.
+ * Activity con [adjustNothing]: el teclado no redimensiona la ventana.
+ * El área central usa insets del IME restando la altura medida de la barra inferior, para no
+ * duplicar espacio ni quitar la barra del árbol (transición más fluida).
  */
 @Composable
 fun MainScreen(
@@ -72,13 +79,21 @@ fun MainScreen(
     var productCreatedMessage by remember { mutableStateOf<String?>(null) }
     var productBeingEdited by remember { mutableStateOf<ShopProductDto?>(null) }
     val tabs = listOf(MainTab.Orders, MainTab.Products, MainTab.Profile)
+    var bottomBarHeightPx by remember { mutableIntStateOf(0) }
+    val bottomBarInsets = WindowInsets(bottom = bottomBarHeightPx)
+    val contentImeInsets = if (showCreateProduct) {
+        WindowInsets.ime
+    } else {
+        WindowInsets.ime.exclude(bottomBarInsets)
+    }
 
     Column(Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .imePadding()
+                .windowInsetsPadding(contentImeInsets),
+            contentAlignment = Alignment.TopStart,
         ) {
             if (showCreateProduct) {
                 CreateProductScreen(
@@ -118,6 +133,7 @@ fun MainScreen(
         }
         if (!showCreateProduct) {
             DobbyShopBottomBar(
+                modifier = Modifier.onSizeChanged { bottomBarHeightPx = it.height },
                 tabs = tabs,
                 selectedIndex = selectedTab,
                 onTabSelected = { selectedTab = it },
@@ -128,12 +144,13 @@ fun MainScreen(
 
 @Composable
 private fun DobbyShopBottomBar(
+    modifier: Modifier = Modifier,
     tabs: List<MainTab>,
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.navigationBarsPadding(),
+        modifier = modifier.navigationBarsPadding(),
         color = DobbyShopColors.Surface,
         shadowElevation = 12.dp,
         tonalElevation = 0.dp,
@@ -141,7 +158,7 @@ private fun DobbyShopBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+                .padding(horizontal = 20.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             tabs.forEachIndexed { index, tab ->
@@ -168,29 +185,31 @@ private fun DobbyShopBottomBarItem(
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(pillColor)
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = tab.icon,
                 contentDescription = tab.title,
                 tint = iconColor,
+                modifier = Modifier.size(22.dp),
             )
         }
         Text(
             text = tab.title,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = textColor,
-            modifier = Modifier.padding(top = 4.dp),
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 2.dp),
         )
     }
 }

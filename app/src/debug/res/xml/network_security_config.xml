@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: replaces main network_security_config so HTTP works to any host
+     (emulator 10.0.2.2, LAN IP, 127.0.0.1 with adb reverse). Release keeps main/res strict config. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

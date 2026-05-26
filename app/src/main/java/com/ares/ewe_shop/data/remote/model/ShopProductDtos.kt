@@ -12,6 +12,7 @@ data class ShopProductDto(
     @SerializedName("discount") val discount: Int = 0,
     @SerializedName("rate") val rate: Float = 0f,
     @SerializedName("isActive") val isActive: Boolean = true,
+    @SerializedName("category") val category: String = "miscelaneos",
     @SerializedName("shop") val shop: ShopNameRef? = null
 )
 
@@ -26,7 +27,8 @@ data class CreateShopProductRequest(
     @SerializedName("imageUrls") val imageUrls: List<String>,
     @SerializedName("hasPromotion") val hasPromotion: Boolean,
     @SerializedName("discount") val discount: Int,
-    @SerializedName("isActive") val isActive: Boolean
+    @SerializedName("isActive") val isActive: Boolean,
+    @SerializedName("category") val category: String,
 )
 
 data class UploadImageResponse(
