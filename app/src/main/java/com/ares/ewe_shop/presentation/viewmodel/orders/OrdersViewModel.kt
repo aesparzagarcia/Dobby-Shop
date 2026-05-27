@@ -65,7 +65,12 @@ class OrdersViewModel @Inject constructor(
     fun loadOrders() {
         viewModelScope.launch {
             val filter = _uiState.value.selectedStatusFilter
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val hasCachedOrders = _uiState.value.orders.isNotEmpty()
+            _uiState.value = _uiState.value.copy(
+                isLoading = !hasCachedOrders,
+                isRefreshing = hasCachedOrders,
+                errorMessage = null,
+            )
             val ordersResult = orderRepository.getOrders(filter)
             val statsResult = orderRepository.getOrders(null)
             ordersResult

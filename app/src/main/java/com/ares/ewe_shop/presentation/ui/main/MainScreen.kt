@@ -24,16 +24,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -43,9 +47,9 @@ import com.ares.ewe_shop.core.theme.DobbyShopColors
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import com.ares.ewe_shop.data.remote.model.ShopOrderDto
+import androidx.navigation.NavController
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
-import com.ares.ewe_shop.presentation.ui.orders.OrdersScreen
+import com.ares.ewe_shop.presentation.ui.navigation.OrdersNavHost
 import com.ares.ewe_shop.presentation.ui.product.CreateProductScreen
 import com.ares.ewe_shop.presentation.ui.product.ShopProductsScreen
 import com.ares.ewe_shop.presentation.ui.profile.ProfileScreen
@@ -66,7 +70,8 @@ sealed class MainTab(
  */
 @Composable
 fun MainScreen(
-    onOrderClick: (ShopOrderDto) -> Unit,
+    rootNavController: NavController,
+    mainViewModelStoreOwner: ViewModelStoreOwner,
     onLogout: () -> Unit,
     /** Contador en SavedStateHandle de la ruta Main; al volver del detalle sube y dispara refresh en pedidos. */
     ordersRefreshGeneration: StateFlow<Int>? = null,
@@ -87,7 +92,13 @@ fun MainScreen(
         WindowInsets.ime.exclude(bottomBarInsets)
     }
 
+    val density = LocalDensity.current
+    val bottomBarPadding = with(density) {
+        if (showCreateProduct) 0.dp else bottomBarHeightPx.toDp()
+    }
+
     Column(Modifier.fillMaxSize()) {
+        CompositionLocalProvider(LocalMainBottomBarPadding provides bottomBarPadding) {
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -111,9 +122,11 @@ fun MainScreen(
                 )
             } else {
                 when (selectedTab) {
-                    0 -> OrdersScreen(
-                        onOrderClick = onOrderClick,
+                    0 -> OrdersNavHost(
+                        rootNavController = rootNavController,
+                        mainViewModelStoreOwner = mainViewModelStoreOwner,
                         ordersRefreshGeneration = ordersRefreshGen,
+                        modifier = Modifier.fillMaxSize(),
                     )
                     1 -> ShopProductsScreen(
                         onNuevoClick = {
@@ -125,11 +138,16 @@ fun MainScreen(
                             showCreateProduct = true
                         },
                         postCreateMessage = productCreatedMessage,
-                        onPostCreateMessageConsumed = { productCreatedMessage = null }
+                        onPostCreateMessageConsumed = { productCreatedMessage = null },
+                        viewModel = hiltViewModel(mainViewModelStoreOwner),
                     )
-                    2 -> ProfileScreen(onLogout = onLogout)
+                    2 -> ProfileScreen(
+                        onLogout = onLogout,
+                        viewModel = hiltViewModel(mainViewModelStoreOwner),
+                    )
                 }
             }
+        }
         }
         if (!showCreateProduct) {
             DobbyShopBottomBar(

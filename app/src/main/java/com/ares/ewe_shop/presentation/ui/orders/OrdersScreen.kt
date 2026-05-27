@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ares.ewe_shop.core.theme.DobbyShopColors
+import com.ares.ewe_shop.presentation.ui.main.LocalMainBottomBarPadding
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.productsSubtotal
 import com.ares.ewe_shop.presentation.viewmodel.orders.OrderStats
@@ -189,6 +190,7 @@ fun OrdersScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val bottomBarPadding = LocalMainBottomBarPadding.current
     val context = LocalContext.current
     var notificationsEnabled by remember {
         mutableStateOf(
@@ -204,7 +206,7 @@ fun OrdersScreen(
     ) { granted -> notificationsEnabled = granted }
 
     LaunchedEffect(ordersRefreshGeneration) {
-        if (ordersRefreshGeneration > 0) viewModel.loadOrders()
+        if (ordersRefreshGeneration > 0) viewModel.refresh()
     }
 
     LaunchedEffect(uiState.errorMessage) {
@@ -221,7 +223,12 @@ fun OrdersScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         containerColor = DobbyShopColors.Background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = bottomBarPadding + 8.dp),
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier

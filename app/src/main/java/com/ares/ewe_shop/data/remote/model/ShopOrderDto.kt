@@ -18,7 +18,9 @@ data class ShopOrderDto(
     @SerializedName("customerEmail") val customerEmail: String?,
     @SerializedName("estimatedPreparationMinutes") val estimatedPreparationMinutes: Int? = null,
     @SerializedName("items") val items: List<ShopOrderItemDto>,
-    @SerializedName("deliveryMan") val deliveryMan: DeliveryManDto?
+    @SerializedName("deliveryMan") val deliveryMan: DeliveryManDto?,
+    @SerializedName("pickup_code") val pickupCode: String? = null,
+    @SerializedName("pickup_handoff_at") val pickupHandoffAt: String? = null,
 )
 
 /** Suma de líneas de producto (sin costo de envío). */

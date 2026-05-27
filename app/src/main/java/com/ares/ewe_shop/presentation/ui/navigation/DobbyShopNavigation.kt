@@ -1,11 +1,13 @@
 package com.ares.ewe_shop.presentation.ui.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavType
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -14,23 +16,10 @@ import com.ares.ewe_shop.di.SessionEventBusEntryPoint
 import com.ares.ewe_shop.presentation.ui.auth.otp.OtpScreen
 import com.ares.ewe_shop.presentation.ui.auth.phone.PhoneScreen
 import com.ares.ewe_shop.presentation.ui.main.MainScreen
-import com.ares.ewe_shop.presentation.ui.orders.OrderDetailScreen
 import com.ares.ewe_shop.presentation.ui.orders.SearchingDriverScreen
 import com.ares.ewe_shop.presentation.ui.splash.SplashScreen
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.StateFlow
-
-/** Se incrementa al volver del detalle para que [OrdersScreen] recargue la lista. */
-private const val KEY_ORDERS_REFRESH_GEN = "orders_list_refresh_gen"
-
-private fun incrementMainOrdersRefreshGen(navController: NavController) {
-    runCatching {
-        navController.getBackStackEntry(DobbyShopScreens.Main).savedStateHandle
-    }.getOrNull()?.let { handle ->
-        val next = (handle.get<Int>(KEY_ORDERS_REFRESH_GEN) ?: 0) + 1
-        handle[KEY_ORDERS_REFRESH_GEN] = next
-    }
-}
 
 @Composable
 fun DobbyShopNavigation() {
@@ -52,7 +41,8 @@ fun DobbyShopNavigation() {
     }
     NavHost(
         navController = navController,
-        startDestination = DobbyShopScreens.Splash
+        startDestination = DobbyShopScreens.Splash,
+        modifier = Modifier.fillMaxSize(),
     ) {
         composable(DobbyShopScreens.Splash) {
             SplashScreen(
@@ -91,39 +81,18 @@ fun DobbyShopNavigation() {
                 }
             )
         }
-        composable(DobbyShopScreens.Main) { backStackEntry ->
+        composable(DobbyShopScreens.Main) { mainBackStackEntry ->
             val ordersRefreshGeneration: StateFlow<Int> =
-                backStackEntry.savedStateHandle.getStateFlow(KEY_ORDERS_REFRESH_GEN, 0)
+                mainBackStackEntry.savedStateHandle.getStateFlow(KEY_ORDERS_REFRESH_GEN, 0)
             MainScreen(
-                onOrderClick = { order ->
-                    navController.navigate(DobbyShopScreens.orderDetail(order.id))
-                },
+                rootNavController = navController,
+                mainViewModelStoreOwner = mainBackStackEntry,
                 onLogout = {
                     navController.navigate(DobbyShopScreens.Phone) {
                         popUpTo(DobbyShopScreens.Main) { inclusive = true }
                     }
                 },
                 ordersRefreshGeneration = ordersRefreshGeneration,
-            )
-        }
-        composable(
-            route = DobbyShopScreens.OrderDetail,
-            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
-        ) {
-            // Misma lógica al salir por flecha, gesto atrás o tras aceptar/rechazar: refrescar lista en Main.
-            val popDetailAndRefreshOrders: () -> Unit = {
-                incrementMainOrdersRefreshGen(navController)
-                navController.popBackStack()
-            }
-            OrderDetailScreen(
-                onBack = popDetailAndRefreshOrders,
-                onAcceptOrRejectSuccess = popDetailAndRefreshOrders,
-                onReadyForPickupSuccess = {
-                    incrementMainOrdersRefreshGen(navController)
-                    navController.navigate(DobbyShopScreens.SearchingDriver) {
-                        popUpTo(DobbyShopScreens.Main) { inclusive = false }
-                    }
-                },
             )
         }
         composable(DobbyShopScreens.SearchingDriver) {

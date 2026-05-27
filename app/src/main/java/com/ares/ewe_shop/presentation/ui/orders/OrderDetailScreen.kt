@@ -83,6 +83,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.ares.ewe_shop.core.theme.DobbyShopColors
+import com.ares.ewe_shop.presentation.ui.main.LocalMainBottomBarPadding
 import com.ares.ewe_shop.core.util.absoluteUploadUrl
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.ShopOrderItemDto
@@ -166,6 +167,11 @@ private fun formatPrepDurationMinutes(totalMinutes: Int): String {
     }
 }
 
+private fun formatDetailOrderNumber(orderId: String): String {
+    val suffix = orderId.takeLast(4).uppercase(Locale.getDefault())
+    return "#$suffix"
+}
+
 private fun formatCustomerLabel(order: ShopOrderDto): String? {
     val parts = listOfNotNull(
         order.customerName?.trim()?.takeIf { it.isNotBlank() },
@@ -232,6 +238,7 @@ fun OrderDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val bottomBarPadding = LocalMainBottomBarPadding.current
     var showPrepTimePicker by rememberSaveable { mutableStateOf(false) }
     var estimatedPrepMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
     var showPrepInstructionNotice by rememberSaveable { mutableStateOf(true) }
@@ -258,7 +265,12 @@ fun OrderDetailScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         containerColor = DobbyShopColors.Background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = bottomBarPadding + 8.dp),
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -294,33 +306,62 @@ fun OrderDetailScreen(
                 }
                 else -> {
                     val order = uiState.order!!
-                    Column(
+                    val hasBottomActions = order.status in setOf("PENDING", "CONFIRMED", "PREPARING")
+                    Box(
                         modifier = Modifier
                             .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 20.dp)
-                            .padding(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            .fillMaxWidth(),
                     ) {
-                        OrderInfoCard(order = order)
-                        ProductsSection(items = order.items)
-                        OrderTotalCard(total = order.productsSubtotal())
-                        if (order.status in setOf("ASSIGNED", "ON_DELIVERY", "DELIVERED")) {
-                            order.deliveryMan?.let { dm ->
-                                DeliveryDriverCard(name = dm.name)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp)
+                                .padding(bottom = if (hasBottomActions) 8.dp else 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            OrderInfoCard(order = order)
+                            ProductsSection(items = order.items)
+                            OrderTotalCard(total = order.productsSubtotal())
+                            if (order.status in setOf("ASSIGNED", "ON_DELIVERY", "DELIVERED")) {
+                                order.deliveryMan?.let { dm ->
+                                    DeliveryDriverCard(name = dm.name)
+                                }
                             }
-                        }
-                        order.estimatedPreparationMinutes?.takeIf { it > 0 }?.let { mins ->
-                            EstimatedPrepInfoCard(minutes = mins)
+                            when (order.status) {
+                                "ASSIGNED" -> {
+                                    if (!order.pickupCode.isNullOrBlank()) {
+                                        PickupHandoffCodeCard(
+                                            orderId = order.id,
+                                            pickupCode = order.pickupCode,
+                                            customerLabel = formatCustomerLabel(order),
+                                            courierName = order.deliveryMan?.name,
+                                            handedOff = false,
+                                        )
+                                    }
+                                }
+                                "ON_DELIVERY" -> {
+                                    PickupHandoffCodeCard(
+                                        orderId = order.id,
+                                        pickupCode = null,
+                                        customerLabel = formatCustomerLabel(order),
+                                        courierName = order.deliveryMan?.name,
+                                        handedOff = true,
+                                    )
+                                }
+                            }
+                            order.estimatedPreparationMinutes?.takeIf { it > 0 }?.let { mins ->
+                                EstimatedPrepInfoCard(minutes = mins)
+                            }
                         }
                     }
 
+                    if (hasBottomActions) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
                             .padding(horizontal = 20.dp)
-                            .padding(bottom = 16.dp),
+                            .padding(bottom = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         if (order.status == "PENDING") {
@@ -472,6 +513,7 @@ fun OrderDetailScreen(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
@@ -798,6 +840,77 @@ private fun EstimatedPrepInfoCard(minutes: Int) {
                 text = "Tiempo estimado de preparación: ${formatPrepDurationMinutes(minutes)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = DobbyShopColors.PurpleDark,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickupHandoffCodeCard(
+    orderId: String,
+    pickupCode: String?,
+    customerLabel: String?,
+    courierName: String?,
+    handedOff: Boolean,
+) {
+    val containerColor = if (handedOff) DobbyShopColors.GreenLight else DobbyShopColors.TealLight
+    val accent = if (handedOff) DobbyShopColors.GreenDark else DobbyShopColors.TealDark
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = if (handedOff) "Pedido entregado al repartidor" else "Código para el repartidor",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = accent,
+            )
+            if (!handedOff && pickupCode != null) {
+                Text(
+                    text = pickupCode,
+                    fontSize = 40.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 8.sp,
+                    color = DobbyShopColors.TextPrimary,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+            }
+            Text(
+                text = "Pedido ${formatDetailOrderNumber(orderId)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = DobbyShopColors.TextPrimary,
+            )
+            customerLabel?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DobbyShopColors.TextSecondary,
+                )
+            }
+            courierName?.let { name ->
+                Text(
+                    text = "Repartidor: $name",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DobbyShopColors.TextSecondary,
+                )
+            }
+            Text(
+                text = if (handedOff) {
+                    "El repartidor confirmó la recogida con el código."
+                } else {
+                    "Entrega el pedido solo cuando el repartidor ingrese este código en su app."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = DobbyShopColors.TextSecondary,
+                lineHeight = 18.sp,
             )
         }
     }
