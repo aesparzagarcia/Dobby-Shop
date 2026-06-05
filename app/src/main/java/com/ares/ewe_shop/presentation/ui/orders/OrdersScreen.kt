@@ -74,8 +74,9 @@ import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.productsSubtotal
 import com.ares.ewe_shop.presentation.viewmodel.orders.OrderStats
 import com.ares.ewe_shop.presentation.viewmodel.orders.OrdersViewModel
-import java.text.SimpleDateFormat
+import com.ares.ewe_shop.core.util.OrderDateFormat
 import java.util.Locale
+
 
 private data class StatusFilterChip(
     val value: String?,
@@ -159,17 +160,7 @@ private fun statusVisual(status: String): StatusVisual = when (status) {
     )
 }
 
-private fun formatOrderDate(createdAt: String): String {
-    return try {
-        val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-        val date = iso.parse(createdAt) ?: return createdAt
-        val datePart = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
-        val timePart = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(date)
-        "$datePart • $timePart"
-    } catch (_: Exception) {
-        createdAt
-    }
-}
+private fun formatOrderDate(createdAt: String): String = OrderDateFormat.formatList(createdAt)
 
 private fun formatOrderId(id: String): String {
     val compact = id.replace("-", "").uppercase(Locale.getDefault())

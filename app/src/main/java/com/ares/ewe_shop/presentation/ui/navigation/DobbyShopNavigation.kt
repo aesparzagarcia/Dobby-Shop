@@ -98,8 +98,9 @@ fun DobbyShopNavigation() {
         composable(DobbyShopScreens.SearchingDriver) {
             SearchingDriverScreen(
                 onNavigateHome = {
-                    navController.popBackStack(DobbyShopScreens.Main, false)
-                }
+                    incrementMainOrdersRefreshGen(navController)
+                    navController.popBackStack()
+                },
             )
         }
     }

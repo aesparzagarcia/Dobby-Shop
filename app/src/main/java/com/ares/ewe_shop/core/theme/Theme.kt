@@ -9,18 +9,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
-    primary = DobbyShopColors.Purple,
+    primary = DobbyShopColors.Primary,
     onPrimary = Color.White,
-    primaryContainer = DobbyShopColors.PurpleLight,
-    onPrimaryContainer = DobbyShopColors.PurpleDark,
-    secondary = DobbyShopColors.PurpleMuted,
+    primaryContainer = DobbyShopColors.Light,
+    onPrimaryContainer = DobbyShopColors.Dark,
+    secondary = DobbyShopColors.Accent,
     onSecondary = Color.White,
-    background = DobbyShopColors.Background,
-    onBackground = DobbyShopColors.TextPrimary,
+    tertiary = DobbyShopColors.Warning,
+    onTertiary = DobbyShopColors.Dark,
+    background = Color.White,
+    onBackground = DobbyShopColors.Dark,
     surface = DobbyShopColors.Surface,
-    onSurface = DobbyShopColors.TextPrimary,
-    surfaceVariant = DobbyShopColors.PurpleLight,
-    onSurfaceVariant = DobbyShopColors.TextSecondary,
+    onSurface = DobbyShopColors.Dark,
+    surfaceVariant = DobbyShopColors.Light,
+    onSurfaceVariant = DobbyShopColors.Dark.copy(alpha = 0.72f),
     outline = DobbyShopColors.Border,
 )
 

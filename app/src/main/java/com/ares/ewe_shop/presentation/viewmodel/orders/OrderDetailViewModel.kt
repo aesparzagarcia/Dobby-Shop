@@ -87,7 +87,7 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    fun markPreparing(estimatedPreparationMinutes: Int) {
+    fun markPreparing(estimatedPreparationMinutes: Int, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPreparing = true, errorMessage = null)
             orderRepository.markOrderPreparing(orderId, estimatedPreparationMinutes)
@@ -100,6 +100,7 @@ class OrderDetailViewModel @Inject constructor(
                         isPreparing = false,
                         actionSuccess = true
                     )
+                    onSuccess()
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(

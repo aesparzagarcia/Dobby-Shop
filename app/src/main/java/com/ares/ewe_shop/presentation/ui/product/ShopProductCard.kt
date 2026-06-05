@@ -114,7 +114,7 @@ fun ShopProductCard(
                             .align(Alignment.TopStart)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFFFE34D))
+                            .background(DobbyShopColors.Warning)
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,

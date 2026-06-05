@@ -66,19 +66,19 @@ fun OrdersNavHost(
             route = OrdersRoutes.Detail,
             arguments = listOf(navArgument("orderId") { type = NavType.StringType }),
         ) {
-            val popDetailAndRefreshOrders: () -> Unit = {
+            val refreshOrdersList: () -> Unit = {
                 incrementMainOrdersRefreshGen(rootNavController)
+            }
+            val popDetailAndRefreshOrders: () -> Unit = {
+                refreshOrdersList()
                 ordersNavController.popBackStack()
             }
             OrderDetailScreen(
                 onBack = popDetailAndRefreshOrders,
-                onAcceptOrRejectSuccess = popDetailAndRefreshOrders,
-                onReadyForPickupSuccess = {
-                    incrementMainOrdersRefreshGen(rootNavController)
-                    rootNavController.navigate(DobbyShopScreens.SearchingDriver) {
-                        popUpTo(DobbyShopScreens.Main) { inclusive = false }
-                    }
-                },
+                onAcceptSuccess = refreshOrdersList,
+                onRejectSuccess = popDetailAndRefreshOrders,
+                onMarkPreparingSuccess = popDetailAndRefreshOrders,
+                onReadyForPickupSuccess = popDetailAndRefreshOrders,
             )
         }
     }

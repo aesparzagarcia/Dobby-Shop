@@ -84,12 +84,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.ares.ewe_shop.core.theme.DobbyShopColors
 import com.ares.ewe_shop.presentation.ui.main.LocalMainBottomBarPadding
+import com.ares.ewe_shop.core.util.OrderDateFormat
 import com.ares.ewe_shop.core.util.absoluteUploadUrl
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.ShopOrderItemDto
 import com.ares.ewe_shop.data.remote.model.productsSubtotal
 import com.ares.ewe_shop.presentation.viewmodel.orders.OrderDetailViewModel
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 private data class DetailStatusVisual(
@@ -181,17 +181,7 @@ private fun formatCustomerLabel(order: ShopOrderDto): String? {
     return "Cliente: ${parts.joinToString(" ")}"
 }
 
-private fun formatDetailOrderDate(createdAt: String): String {
-    return try {
-        val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-        val date = iso.parse(createdAt) ?: return createdAt
-        val datePart = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
-        val timePart = SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
-        "$datePart · $timePart"
-    } catch (_: Exception) {
-        createdAt
-    }
-}
+private fun formatDetailOrderDate(createdAt: String): String = OrderDateFormat.formatDetail(createdAt)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -232,7 +222,9 @@ private fun EstimatedPrepTimePickerDialog(
 @Composable
 fun OrderDetailScreen(
     onBack: () -> Unit,
-    onAcceptOrRejectSuccess: () -> Unit,
+    onAcceptSuccess: () -> Unit,
+    onRejectSuccess: () -> Unit,
+    onMarkPreparingSuccess: () -> Unit,
     onReadyForPickupSuccess: () -> Unit,
     viewModel: OrderDetailViewModel = hiltViewModel(),
 ) {
@@ -370,7 +362,7 @@ fun OrderDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 OutlinedButton(
-                                    onClick = { viewModel.rejectOrder(onAcceptOrRejectSuccess) },
+                                    onClick = { viewModel.rejectOrder(onRejectSuccess) },
                                     modifier = Modifier.weight(1f),
                                     enabled = !uiState.isAccepting && !uiState.isRejecting,
                                     shape = RoundedCornerShape(14.dp),
@@ -385,7 +377,7 @@ fun OrderDetailScreen(
                                     }
                                 }
                                 Button(
-                                    onClick = { viewModel.acceptOrder(onAcceptOrRejectSuccess) },
+                                    onClick = { viewModel.acceptOrder(onAcceptSuccess) },
                                     modifier = Modifier.weight(1f),
                                     enabled = !uiState.isAccepting && !uiState.isRejecting,
                                     shape = RoundedCornerShape(14.dp),
@@ -465,7 +457,9 @@ fun OrderDetailScreen(
                                 estimatedPrepMinutes!! in 1..1440
                             Button(
                                 onClick = {
-                                    estimatedPrepMinutes?.let { viewModel.markPreparing(it) }
+                                    estimatedPrepMinutes?.let {
+                                        viewModel.markPreparing(it, onMarkPreparingSuccess)
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !uiState.isPreparing && minutesValid,
