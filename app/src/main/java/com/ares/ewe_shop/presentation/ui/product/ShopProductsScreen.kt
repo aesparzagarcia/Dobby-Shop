@@ -68,6 +68,7 @@ private val productCategoryChips = listOf(ProductCategoryChip(null, "Todos", "")
     ShopProductCategory.all.map { (slug, label) ->
         val emoji = when (slug) {
             ShopProductCategory.BEBIDAS -> "🥤"
+            ShopProductCategory.ALCOHOL -> "🍾"
             ShopProductCategory.POSTRES -> "🍨"
             ShopProductCategory.COMIDAS -> "🍽️"
             ShopProductCategory.SNACKS -> "🍿"

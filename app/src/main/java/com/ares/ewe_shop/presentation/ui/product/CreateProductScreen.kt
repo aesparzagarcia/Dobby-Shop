@@ -82,6 +82,7 @@ private const val MAX_DESCRIPTION_LENGTH = 200
 
 private fun categoryEmoji(slug: String): String = when (slug) {
     ShopProductCategory.BEBIDAS -> "🥤"
+    ShopProductCategory.ALCOHOL -> "🍾"
     ShopProductCategory.POSTRES -> "🍨"
     ShopProductCategory.COMIDAS -> "🍽️"
     ShopProductCategory.SNACKS -> "🍿"
