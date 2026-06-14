@@ -22,7 +22,10 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-fun DobbyShopNavigation() {
+fun DobbyShopNavigation(
+    pendingOrderId: String? = null,
+    onPendingOrderNavigated: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val sessionEventBus = remember(context) {
@@ -93,6 +96,8 @@ fun DobbyShopNavigation() {
                     }
                 },
                 ordersRefreshGeneration = ordersRefreshGeneration,
+                pendingOrderId = pendingOrderId,
+                onPendingOrderNavigated = onPendingOrderNavigated,
             )
         }
         composable(DobbyShopScreens.SearchingDriver) {

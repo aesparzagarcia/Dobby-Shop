@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +76,8 @@ fun MainScreen(
     onLogout: () -> Unit,
     /** Contador en SavedStateHandle de la ruta Main; al volver del detalle sube y dispara refresh en pedidos. */
     ordersRefreshGeneration: StateFlow<Int>? = null,
+    pendingOrderId: String? = null,
+    onPendingOrderNavigated: () -> Unit = {},
 ) {
     val ordersRefreshFlow = ordersRefreshGeneration ?: remember { MutableStateFlow(0) }
     val ordersRefreshGen by ordersRefreshFlow.collectAsStateWithLifecycle(0)
@@ -95,6 +98,12 @@ fun MainScreen(
     val density = LocalDensity.current
     val bottomBarPadding = with(density) {
         if (showCreateProduct) 0.dp else bottomBarHeightPx.toDp()
+    }
+
+    LaunchedEffect(pendingOrderId) {
+        if (!pendingOrderId.isNullOrBlank()) {
+            selectedTab = 0
+        }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -126,6 +135,8 @@ fun MainScreen(
                         rootNavController = rootNavController,
                         mainViewModelStoreOwner = mainViewModelStoreOwner,
                         ordersRefreshGeneration = ordersRefreshGen,
+                        pendingOrderId = pendingOrderId,
+                        onPendingOrderNavigated = onPendingOrderNavigated,
                         modifier = Modifier.fillMaxSize(),
                     )
                     1 -> ShopProductsScreen(

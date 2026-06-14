@@ -1,6 +1,7 @@
 package com.ares.ewe_shop.presentation.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -12,12 +13,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.ares.ewe_shop.core.theme.DobbyShopTheme
 import com.ares.ewe_shop.presentation.ui.navigation.DobbyShopNavigation
 import com.ares.ewe_shop.realtime.OrderRealtimeBus
+import com.ares.ewe_shop.realtime.ShopOrderNotificationHelper
 import com.ares.ewe_shop.realtime.ShopPushTokenRegistrar
 import com.ares.ewe_shop.realtime.ShopRealtimeCoordinator
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,6 +49,8 @@ class MainActivity : ComponentActivity() {
     /** True tras [onStop] (app en background u otra activity encima). */
     private var wasStopped = false
 
+    private var pendingOrderId by mutableStateOf<String?>(null)
+
     private val notifPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -52,6 +59,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        consumeOrderIdFromIntent(intent)
         enableEdgeToEdge()
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
@@ -60,9 +68,23 @@ class MainActivity : ComponentActivity() {
         requestNotifPermissionIfNeeded()
         setContent {
             DobbyShopTheme {
-                DobbyShopApp()
+                DobbyShopApp(
+                    pendingOrderId = pendingOrderId,
+                    onPendingOrderNavigated = { pendingOrderId = null },
+                )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ShopOrderNotificationHelper.clearAllOrderNotifications(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeOrderIdFromIntent(intent)
     }
 
     override fun onStop() {
@@ -76,6 +98,23 @@ class MainActivity : ComponentActivity() {
             wasStopped = false
             orderRealtimeBus.notifyOrdersChanged()
         }
+    }
+
+    private fun consumeOrderIdFromIntent(intent: Intent?) {
+        if (intent == null) return
+        val extras = intent.extras
+
+        fun extra(key: String): String? =
+            intent.getStringExtra(key)?.trim()?.takeIf { it.isNotEmpty() }
+                ?: extras?.getString(key)?.trim()?.takeIf { it.isNotEmpty() }
+
+        val orderId = extra(ShopOrderNotificationHelper.EXTRA_ORDER_ID) ?: extra("order_id")
+        if (orderId == null) return
+
+        ShopOrderNotificationHelper.clearOrderNotifications(this, orderId)
+        pendingOrderId = orderId
+        intent.removeExtra(ShopOrderNotificationHelper.EXTRA_ORDER_ID)
+        extras?.remove("order_id")
     }
 
     private fun requestNotifPermissionIfNeeded() {
@@ -100,11 +139,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun DobbyShopApp() {
+fun DobbyShopApp(
+    pendingOrderId: String? = null,
+    onPendingOrderNavigated: () -> Unit = {},
+) {
     Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
     ) {
-        DobbyShopNavigation()
+        DobbyShopNavigation(
+            pendingOrderId = pendingOrderId,
+            onPendingOrderNavigated = onPendingOrderNavigated,
+        )
     }
 }
