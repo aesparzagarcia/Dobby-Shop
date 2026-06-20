@@ -22,15 +22,34 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-        // Local API: default Mac LAN IP for physical device. Emulator: DEV_API_HOST=10.0.2.2 in gradle.properties
-        // USB + adb reverse tcp:3001 tcp:3001 → DEV_API_HOST=127.0.0.1. Path must end with /api/.
-        val devApiHost = (project.findProperty("DEV_API_HOST") as String?)?.trim()?.takeIf { it.isNotBlank() }
-            ?: "https://dobby-api-31lf.onrender.com"
-        /*val devApiPort = (project.findProperty("DEV_API_PORT") as String?)?.trim()?.takeIf { it.isNotBlank() }
-            ?: "3001"*/
-        //buildConfigField("String", "BASE_URL", "\"http://$devApiHost:$devApiPort/api/\"")
-        buildConfigField("String", "BASE_URL", "\"$devApiHost/api/\"")
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "DobbyShop Dev")
+            buildConfigField("String", "ENVIRONMENT", "\"dev\"")
+            val devHost = (project.findProperty("DEV_API_HOST") as String?)?.trim()?.takeIf { it.isNotBlank() }
+                ?: "http://192.168.1.16:3001"
+            val devPort = (project.findProperty("DEV_API_PORT") as String?)?.trim()?.takeIf { it.isNotBlank() }
+            val devBase = if (devPort != null && !devHost.contains(":")) {
+                "$devHost:$devPort"
+            } else {
+                devHost
+            }
+            buildConfigField("String", "BASE_URL", "\"$devBase/api/\"")
+        }
+        create("prod") {
+            dimension = "environment"
+            resValue("string", "app_name", "DobbyShop")
+            buildConfigField("String", "ENVIRONMENT", "\"prod\"")
+            val prodHost = (project.findProperty("PROD_API_HOST") as String?)?.trim()?.takeIf { it.isNotBlank() }
+                ?: "https://dobby-api-31lf.onrender.com"
+            buildConfigField("String", "BASE_URL", "\"$prodHost/api/\"")
+        }
     }
 
     buildTypes {
