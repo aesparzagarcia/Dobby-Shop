@@ -54,6 +54,7 @@ import com.ares.ewe_shop.presentation.ui.navigation.OrdersNavHost
 import com.ares.ewe_shop.presentation.ui.product.CreateProductScreen
 import com.ares.ewe_shop.presentation.ui.product.ShopProductsScreen
 import com.ares.ewe_shop.presentation.ui.profile.ProfileScreen
+import com.ares.ewe_shop.presentation.viewmodel.main.MainViewModel
 
 sealed class MainTab(
     val title: String,
@@ -78,6 +79,7 @@ fun MainScreen(
     ordersRefreshGeneration: StateFlow<Int>? = null,
     pendingOrderId: String? = null,
     onPendingOrderNavigated: () -> Unit = {},
+    mainViewModel: MainViewModel = hiltViewModel(mainViewModelStoreOwner),
 ) {
     val ordersRefreshFlow = ordersRefreshGeneration ?: remember { MutableStateFlow(0) }
     val ordersRefreshGen by ordersRefreshFlow.collectAsStateWithLifecycle(0)
@@ -153,7 +155,7 @@ fun MainScreen(
                         viewModel = hiltViewModel(mainViewModelStoreOwner),
                     )
                     2 -> ProfileScreen(
-                        onLogout = onLogout,
+                        onLogout = { mainViewModel.logout(onLogout) },
                         viewModel = hiltViewModel(mainViewModelStoreOwner),
                     )
                 }

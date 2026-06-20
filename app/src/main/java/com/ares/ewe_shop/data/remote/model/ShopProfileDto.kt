@@ -11,6 +11,7 @@ data class ShopProfileDto(
     @SerializedName("next_level_min_score") val nextLevelMinScore: Int? = null,
     @SerializedName("score_blend_weights") val scoreBlendWeights: ScoreBlendWeightsDto,
     @SerializedName("breakdown") val breakdown: ShopProfileBreakdownDto,
+    @SerializedName("breakdown_prev_7d") val breakdownPrev7d: ShopProfileWindowMetricsDto? = null,
     @SerializedName("insights") val insights: List<String>,
     @SerializedName("missions") val missions: List<ShopMissionDto>,
 )
@@ -35,6 +36,19 @@ data class ShopProfileBreakdownDto(
     @SerializedName("orders_last_30d") val ordersLast30d: Int,
     @SerializedName("shop_rate_aggregate") val shopRateAggregate: Double,
     @SerializedName("shop_rating_count_aggregate") val shopRatingCountAggregate: Int,
+)
+
+/** Métricas de una ventana de 7 días (p. ej. periodo anterior para tendencias). */
+data class ShopProfileWindowMetricsDto(
+    @SerializedName("orders_delivered") val ordersDelivered: Int,
+    @SerializedName("orders_cancelled_shop") val ordersCancelledShop: Int,
+    @SerializedName("reject_pending") val rejectPending: Int,
+    @SerializedName("cancel_after_confirm") val cancelAfterConfirm: Int,
+    @SerializedName("acceptance_rate_pct") val acceptanceRatePct: Double,
+    @SerializedName("on_time_prep_pct") val onTimePrepPct: Int? = null,
+    @SerializedName("avg_prep_minutes") val avgPrepMinutes: Double? = null,
+    @SerializedName("rated_orders") val ratedOrders: Int,
+    @SerializedName("avg_shop_rating") val avgShopRating: Double? = null,
 )
 
 data class ShopMissionDto(

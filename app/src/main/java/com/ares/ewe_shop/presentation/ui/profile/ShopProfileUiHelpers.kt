@@ -40,3 +40,45 @@ fun levelBenefitsBlurb(levelKey: String): String = when (levelKey.uppercase()) {
     "AT_RISK" -> "Menos visibilidad; revisa cancelaciones y tiempos de preparación."
     else -> ""
 }
+
+data class ProfileMetricTrend(
+    val deltaLabel: String,
+    val isPositive: Boolean,
+)
+
+fun formatBreakdownDateRange(): String {
+    val end = java.time.LocalDate.now()
+    val start = end.minusDays(6)
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale("es", "MX"))
+    return "${start.format(fmt)} – ${end.format(fmt)}"
+}
+
+fun trendDeltaDouble(
+    current: Double?,
+    previous: Double?,
+    lowerIsBetter: Boolean,
+    formatDelta: (Double) -> String,
+): ProfileMetricTrend? {
+    if (current == null || previous == null) return null
+    val delta = current - previous
+    if (kotlin.math.abs(delta) < 0.05) return null
+    val improved = if (lowerIsBetter) delta < 0 else delta > 0
+    return ProfileMetricTrend(
+        deltaLabel = formatDelta(kotlin.math.abs(delta)),
+        isPositive = improved,
+    )
+}
+
+fun trendDeltaInt(
+    current: Int,
+    previous: Int,
+    lowerIsBetter: Boolean,
+): ProfileMetricTrend? {
+    val delta = current - previous
+    if (delta == 0) return null
+    val improved = if (lowerIsBetter) delta < 0 else delta > 0
+    return ProfileMetricTrend(
+        deltaLabel = kotlin.math.abs(delta).toString(),
+        isPositive = improved,
+    )
+}

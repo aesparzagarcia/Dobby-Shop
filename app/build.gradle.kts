@@ -30,7 +30,7 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            resValue("string", "app_name", "DobbyShop Dev")
+            resValue("string", "app_name", "DobbiShop Dev")
             buildConfigField("String", "ENVIRONMENT", "\"dev\"")
             val devHost = (project.findProperty("DEV_API_HOST") as String?)?.trim()?.takeIf { it.isNotBlank() }
                 ?: "http://192.168.1.16:3001"
@@ -44,7 +44,7 @@ android {
         }
         create("prod") {
             dimension = "environment"
-            resValue("string", "app_name", "DobbyShop")
+            resValue("string", "app_name", "DobbiShop")
             buildConfigField("String", "ENVIRONMENT", "\"prod\"")
             val prodHost = (project.findProperty("PROD_API_HOST") as String?)?.trim()?.takeIf { it.isNotBlank() }
                 ?: "https://dobby-api-31lf.onrender.com"

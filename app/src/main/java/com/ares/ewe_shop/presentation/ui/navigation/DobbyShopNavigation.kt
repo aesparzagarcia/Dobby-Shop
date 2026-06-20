@@ -1,5 +1,7 @@
 package com.ares.ewe_shop.presentation.ui.navigation
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,21 +53,27 @@ fun DobbyShopNavigation(
             SplashScreen(
                 onOpenAuth = {
                     navController.navigate(DobbyShopScreens.Phone) {
-                        popUpTo(DobbyShopScreens.Splash) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 onOpenHome = {
                     navController.navigate(DobbyShopScreens.Main) {
-                        popUpTo(DobbyShopScreens.Splash) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
         }
         composable(DobbyShopScreens.Phone) {
+            val activity = LocalContext.current as? Activity
+            BackHandler {
+                activity?.finish()
+            }
             PhoneScreen(
                 onCodeSent = { phone ->
                     navController.navigate(DobbyShopScreens.otp(phone)) {
-                        popUpTo(DobbyShopScreens.Phone) { inclusive = true }
+                        popUpTo(DobbyShopScreens.Phone) { inclusive = false }
                     }
                 }
             )
@@ -73,18 +81,22 @@ fun DobbyShopNavigation(
         composable(
             route = DobbyShopScreens.Otp,
             arguments = listOf(navArgument("phone") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val phone = backStackEntry.arguments?.getString("phone") ?: ""
+        ) {
             OtpScreen(
-                phone = phone,
+                onBack = { navController.popBackStack() },
                 onVerified = {
                     navController.navigate(DobbyShopScreens.Main) {
-                        popUpTo(DobbyShopScreens.Otp) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
         }
         composable(DobbyShopScreens.Main) { mainBackStackEntry ->
+            val activity = LocalContext.current as? Activity
+            BackHandler {
+                activity?.finish()
+            }
             val ordersRefreshGeneration: StateFlow<Int> =
                 mainBackStackEntry.savedStateHandle.getStateFlow(KEY_ORDERS_REFRESH_GEN, 0)
             MainScreen(
@@ -92,7 +104,8 @@ fun DobbyShopNavigation(
                 mainViewModelStoreOwner = mainBackStackEntry,
                 onLogout = {
                     navController.navigate(DobbyShopScreens.Phone) {
-                        popUpTo(DobbyShopScreens.Main) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 ordersRefreshGeneration = ordersRefreshGeneration,
