@@ -1,6 +1,7 @@
 package com.ares.ewe_shop
 
 import android.app.Application
+import com.ares.ewe_shop.core.crash.CrashlyticsJourney
 import com.ares.ewe_shop.session.ProactiveShopAccessTokenRefresh
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -13,6 +14,7 @@ class DobbyShopApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashlyticsJourney.setApp("dobby_shop")
         proactiveShopAccessTokenRefresh.start()
     }
 }

@@ -75,6 +75,7 @@ firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "fir
 firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx" }
 firebase-auth = { module = "com.google.firebase:firebase-auth-ktx" }
 firebase-firestore = { module = "com.google.firebase:firebase-firestore-ktx" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
@@ -82,4 +83,5 @@ lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.3" }
 

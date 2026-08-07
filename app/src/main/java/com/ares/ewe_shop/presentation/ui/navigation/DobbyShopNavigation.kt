@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ares.ewe_shop.core.crash.TrackNavDestination
 import com.ares.ewe_shop.di.SessionEventBusEntryPoint
 import com.ares.ewe_shop.presentation.ui.auth.otp.OtpScreen
 import com.ares.ewe_shop.presentation.ui.auth.phone.PhoneScreen
@@ -29,6 +30,7 @@ fun DobbyShopNavigation(
     onPendingOrderNavigated: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+    TrackNavDestination(navController)
     val context = LocalContext.current
     val sessionEventBus = remember(context) {
         EntryPointAccessors.fromApplication(

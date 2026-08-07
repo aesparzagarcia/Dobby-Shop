@@ -165,6 +165,7 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Medium,
                         )
                     }
+                    ProfileBuildFooter(modifier = Modifier.padding(horizontal = 20.dp))
                 }
             }
         }
