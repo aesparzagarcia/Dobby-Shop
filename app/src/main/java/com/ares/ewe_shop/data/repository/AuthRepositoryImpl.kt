@@ -60,7 +60,8 @@ class AuthRepositoryImpl @Inject constructor(
                 accessToken = token,
                 refreshToken = refresh,
                 shopId = shop?.id,
-                shopName = shop?.name
+                shopName = shop?.name,
+                shopType = shop?.type,
             )
             sessionEventBus.resetExpiredGate()
             shopRealtimeCoordinator.onSessionReady()

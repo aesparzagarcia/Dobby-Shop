@@ -2,6 +2,7 @@ package com.ares.ewe_shop.presentation.viewmodel.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.model.ShopProfileDto
 import com.ares.ewe_shop.domain.repository.ShopProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,7 @@ data class ShopProfileUiState(
 @HiltViewModel
 class ShopProfileViewModel @Inject constructor(
     private val shopProfileRepository: ShopProfileRepository,
+    private val sessionManager: SessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShopProfileUiState())
@@ -38,6 +40,7 @@ class ShopProfileViewModel @Inject constructor(
             )
             shopProfileRepository.getProfile().fold(
                 onSuccess = { dto ->
+                    dto.type?.takeIf { it.isNotBlank() }?.let { sessionManager.updateShopType(it) }
                     _uiState.value = ShopProfileUiState(profile = dto, isLoading = false, errorMessage = null)
                 },
                 onFailure = { e ->

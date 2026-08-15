@@ -3,6 +3,7 @@ package com.ares.ewe_shop.presentation.viewmodel.orders
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.domain.repository.OrderRepository
 import com.ares.ewe_shop.realtime.OrderRealtimeBus
@@ -10,15 +11,18 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class OrderDetailUiState(
     val order: ShopOrderDto? = null,
+    val isCarWash: Boolean = false,
     val isLoading: Boolean = false,
     val isAccepting: Boolean = false,
     val isPreparing: Boolean = false,
     val isReadyForPickup: Boolean = false,
+    val isDetailing: Boolean = false,
     val isRejecting: Boolean = false,
     val errorMessage: String? = null,
     val actionSuccess: Boolean = false
@@ -27,6 +31,7 @@ data class OrderDetailUiState(
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    private val sessionManager: SessionManager,
     orderRealtimeBus: OrderRealtimeBus,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -37,6 +42,12 @@ class OrderDetailViewModel @Inject constructor(
     val uiState: StateFlow<OrderDetailUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            val type = sessionManager.shopType.first()
+            _uiState.value = _uiState.value.copy(
+                isCarWash = type.equals("CAR_WASH", ignoreCase = true),
+            )
+        }
         viewModelScope.launch {
             orderRealtimeBus.refreshOrders.collect {
                 loadOrder(null)
@@ -92,20 +103,48 @@ class OrderDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isPreparing = true, errorMessage = null)
             orderRepository.markOrderPreparing(orderId, estimatedPreparationMinutes)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        order = _uiState.value.order?.copy(
-                            status = "PREPARING",
-                            estimatedPreparationMinutes = estimatedPreparationMinutes
-                        ),
-                        isPreparing = false,
-                        actionSuccess = true
-                    )
-                    onSuccess()
+                    val carWash = _uiState.value.isCarWash
+                    if (carWash) {
+                        // Carwash: este botón avanza hasta Secado y Aspirado (READY_FOR_PICKUP).
+                        orderRepository.markOrderReadyForPickup(orderId)
+                            .onSuccess {
+                                _uiState.value = _uiState.value.copy(
+                                    order = _uiState.value.order?.copy(
+                                        status = "READY_FOR_PICKUP",
+                                        estimatedPreparationMinutes = estimatedPreparationMinutes,
+                                    ),
+                                    isPreparing = false,
+                                    actionSuccess = true,
+                                )
+                                onSuccess()
+                            }
+                            .onFailure { e ->
+                                _uiState.value = _uiState.value.copy(
+                                    order = _uiState.value.order?.copy(
+                                        status = "PREPARING",
+                                        estimatedPreparationMinutes = estimatedPreparationMinutes,
+                                    ),
+                                    isPreparing = false,
+                                    errorMessage = e.message
+                                        ?: "Se marcó lavando, pero no se pudo pasar a Secado y Aspirado",
+                                )
+                            }
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            order = _uiState.value.order?.copy(
+                                status = "PREPARING",
+                                estimatedPreparationMinutes = estimatedPreparationMinutes,
+                            ),
+                            isPreparing = false,
+                            actionSuccess = true,
+                        )
+                        onSuccess()
+                    }
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         isPreparing = false,
-                        errorMessage = e.message ?: "Error al marcar en preparación"
+                        errorMessage = e.message ?: "Error al marcar en preparación",
                     )
                 }
         }
@@ -126,6 +165,27 @@ class OrderDetailViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isReadyForPickup = false,
                         errorMessage = e.message ?: "Error al marcar listo para recoger"
+                    )
+                }
+        }
+    }
+
+    fun markDetailing(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isDetailing = true, errorMessage = null)
+            orderRepository.markOrderDetailing(orderId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        order = _uiState.value.order?.copy(status = "ASSIGNED"),
+                        isDetailing = false,
+                        actionSuccess = true,
+                    )
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isDetailing = false,
+                        errorMessage = e.message ?: "Error al marcar Detallado",
                     )
                 }
         }

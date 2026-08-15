@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Cancel
@@ -99,60 +100,13 @@ private data class DetailStatusVisual(
     val icon: ImageVector,
 )
 
-private fun detailStatusVisual(status: String): DetailStatusVisual = when (status) {
-    "PENDING" -> DetailStatusVisual(
-        "Pendiente",
-        DobbyShopColors.OrangeLight,
-        DobbyShopColors.OrangeDark,
-        Icons.Outlined.Schedule,
-    )
-    "CONFIRMED" -> DetailStatusVisual(
-        "Confirmado",
-        DobbyShopColors.Purple,
-        Color.White,
-        Icons.Default.CheckCircle,
-    )
-    "PREPARING" -> DetailStatusVisual(
-        "En preparación",
-        DobbyShopColors.PurpleLight,
-        DobbyShopColors.Purple,
-        Icons.Default.Restaurant,
-    )
-    "READY_FOR_PICKUP" -> DetailStatusVisual(
-        "Listo para recoger",
-        DobbyShopColors.TealLight,
-        DobbyShopColors.TealDark,
-        Icons.Default.ShoppingBag,
-    )
-    "ASSIGNED" -> DetailStatusVisual(
-        "Asignado",
-        DobbyShopColors.PurpleLight,
-        DobbyShopColors.PurpleDark,
-        Icons.Outlined.LocalShipping,
-    )
-    "ON_DELIVERY" -> DetailStatusVisual(
-        "En camino",
-        DobbyShopColors.BlueLight,
-        DobbyShopColors.BlueDark,
-        Icons.Outlined.LocalShipping,
-    )
-    "DELIVERED" -> DetailStatusVisual(
-        "Entregado",
-        DobbyShopColors.GreenLight,
-        DobbyShopColors.GreenDark,
-        Icons.Default.CheckCircle,
-    )
-    "CANCELLED" -> DetailStatusVisual(
-        "Cancelado",
-        DobbyShopColors.RedLight,
-        DobbyShopColors.RedDark,
-        Icons.Outlined.Cancel,
-    )
-    else -> DetailStatusVisual(
-        status,
-        DobbyShopColors.PurpleLight,
-        DobbyShopColors.Purple,
-        Icons.Default.AccessTime,
+private fun detailStatusVisual(status: String, isCarWash: Boolean): DetailStatusVisual {
+    val visual = orderStatusVisual(status, isCarWash)
+    return DetailStatusVisual(
+        label = visual.label,
+        background = visual.background,
+        foreground = visual.foreground,
+        icon = visual.icon,
     )
 }
 
@@ -226,6 +180,7 @@ fun OrderDetailScreen(
     onRejectSuccess: () -> Unit,
     onMarkPreparingSuccess: () -> Unit,
     onReadyForPickupSuccess: () -> Unit,
+    onDetailingSuccess: () -> Unit,
     viewModel: OrderDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -298,7 +253,8 @@ fun OrderDetailScreen(
                 }
                 else -> {
                     val order = uiState.order!!
-                    val hasBottomActions = order.status in setOf("PENDING", "CONFIRMED", "PREPARING")
+                    val hasBottomActions = order.status in setOf("PENDING", "CONFIRMED", "PREPARING") ||
+                        (order.status == "READY_FOR_PICKUP" && uiState.isCarWash)
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -312,7 +268,7 @@ fun OrderDetailScreen(
                                 .padding(bottom = if (hasBottomActions) 8.dp else 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            OrderInfoCard(order = order)
+                            OrderInfoCard(order = order, isCarWash = uiState.isCarWash)
                             ProductsSection(items = order.items)
                             OrderTotalCard(total = order.productsSubtotal())
                             if (order.status in setOf("ASSIGNED", "ON_DELIVERY", "DELIVERED")) {
@@ -445,12 +401,7 @@ fun OrderDetailScreen(
                                     } else {
                                         "Seleccionar tiempo estimado"
                                     },
-                                    modifier = Modifier.weight(1f),
                                     fontWeight = FontWeight.Medium,
-                                )
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
                                 )
                             }
                             val minutesValid = estimatedPrepMinutes != null &&
@@ -473,13 +424,21 @@ fun OrderDetailScreen(
                                     ActionLoadingIndicator(color = Color.White)
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Default.Restaurant,
+                                        imageVector = if (uiState.isCarWash) {
+                                            Icons.Default.DirectionsCar
+                                        } else {
+                                            Icons.Default.Restaurant
+                                        },
                                         contentDescription = null,
                                         modifier = Modifier.size(20.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Marcar en preparación",
+                                        text = if (uiState.isCarWash) {
+                                            "Marcar Secado y Aspirado"
+                                        } else {
+                                            "Marcar en preparación"
+                                        },
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
@@ -501,7 +460,33 @@ fun OrderDetailScreen(
                                     ActionLoadingIndicator(color = Color.White)
                                 } else {
                                     Text(
-                                        text = "Listo para recoger",
+                                        text = if (uiState.isCarWash) {
+                                            "Marcar Secado y Aspirado"
+                                        } else {
+                                            "Listo para recoger"
+                                        },
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                        }
+
+                        if (order.status == "READY_FOR_PICKUP" && uiState.isCarWash) {
+                            Button(
+                                onClick = { viewModel.markDetailing(onDetailingSuccess) },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !uiState.isDetailing,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DobbyShopColors.Purple,
+                                    contentColor = Color.White,
+                                ),
+                            ) {
+                                if (uiState.isDetailing) {
+                                    ActionLoadingIndicator(color = Color.White)
+                                } else {
+                                    Text(
+                                        text = "Pasar a Detallado",
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
@@ -549,8 +534,8 @@ private fun OrderDetailTopBar(onBack: () -> Unit) {
 }
 
 @Composable
-private fun OrderInfoCard(order: ShopOrderDto) {
-    val visual = detailStatusVisual(order.status)
+private fun OrderInfoCard(order: ShopOrderDto, isCarWash: Boolean) {
+    val visual = detailStatusVisual(order.status, isCarWash)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -558,11 +543,15 @@ private fun OrderInfoCard(order: ShopOrderDto) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(end = 120.dp),
                 ) {
                     DetailIconBox(icon = Icons.Default.Event)
                     Text(
@@ -570,12 +559,12 @@ private fun OrderInfoCard(order: ShopOrderDto) {
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = DobbyShopColors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
-                DetailStatusBadge(
-                    visual = visual,
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
+                DetailStatusBadge(visual = visual)
             }
 
             HorizontalDivider(
@@ -977,6 +966,8 @@ private fun DetailStatusBadge(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = visual.foreground,
+            maxLines = 2,
+            softWrap = true,
         )
     }
 }

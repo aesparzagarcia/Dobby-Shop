@@ -24,13 +24,20 @@ data class OrderStats(
 
 data class OrdersUiState(
     val shopDisplayName: String? = null,
+    val shopType: String? = null,
     val orders: List<ShopOrderDto> = emptyList(),
     val orderStats: OrderStats = OrderStats(),
     val selectedStatusFilter: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isRefreshing: Boolean = false
-)
+) {
+    val isCarWash: Boolean
+        get() = shopType.equals("CAR_WASH", ignoreCase = true)
+
+    val ordersLabel: String
+        get() = if (isCarWash) "Lavado" else "Pedidos"
+}
 
 private fun computeOrderStats(orders: List<ShopOrderDto>): OrderStats = OrderStats(
     total = orders.size,
@@ -52,7 +59,13 @@ class OrdersViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val name = sessionManager.shopName.first()
-            _uiState.update { it.copy(shopDisplayName = name) }
+            val type = sessionManager.shopType.first()
+            _uiState.update {
+                it.copy(
+                    shopDisplayName = name,
+                    shopType = type,
+                )
+            }
         }
         loadOrders()
         viewModelScope.launch {

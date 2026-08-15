@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class ShopProfileDto(
     @SerializedName("name") val name: String,
     @SerializedName("logo_url") val logoUrl: String? = null,
+    @SerializedName("type") val type: String? = null,
     @SerializedName("restaurant_score") val restaurantScore: Int,
     @SerializedName("level_key") val levelKey: String,
     @SerializedName("progress_to_next_level") val progressToNextLevel: Double,

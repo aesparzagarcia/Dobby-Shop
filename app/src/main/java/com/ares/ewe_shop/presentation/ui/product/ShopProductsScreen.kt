@@ -145,33 +145,40 @@ fun ShopProductsScreen(
                 else -> {
                     var searchQuery by rememberSaveable { mutableStateOf("") }
                     val selectedCategoryId = uiState.selectedCategoryId
+                    val isCarWash = uiState.isCarWash
                     val searchFilteredProducts = remember(uiState.products, searchQuery) {
                         filterProductsBySearch(uiState.products, searchQuery)
                     }
-                    val groupedSections = remember(searchFilteredProducts, selectedCategoryId) {
-                        if (selectedCategoryId == null) {
+                    val groupedSections = remember(searchFilteredProducts, selectedCategoryId, isCarWash) {
+                        if (!isCarWash && selectedCategoryId == null) {
                             groupProductsByCategory(searchFilteredProducts)
                         } else {
                             emptyList()
                         }
                     }
-                    val productRows = remember(groupedSections, searchFilteredProducts, selectedCategoryId) {
-                        if (selectedCategoryId == null) {
+                    val productRows = remember(groupedSections, searchFilteredProducts, selectedCategoryId, isCarWash) {
+                        if (!isCarWash && selectedCategoryId == null) {
                             buildGroupedRows(groupedSections)
                         } else {
                             searchFilteredProducts.chunked(2).map { ProductListRow.ProductPair(it) }
                         }
                     }
                     Column(modifier = Modifier.fillMaxSize()) {
-                        ProductsHeader(onNuevoClick = onNuevoClick)
+                        ProductsHeader(
+                            title = if (isCarWash) "Servicios" else "Productos",
+                            onNuevoClick = onNuevoClick,
+                        )
                         ProductsSearchBar(
                             query = searchQuery,
                             onQueryChange = { searchQuery = it },
+                            placeholder = if (isCarWash) "Buscar servicios..." else "Buscar productos...",
                         )
-                        ProductCategoryFilterRow(
-                            selectedCategoryId = selectedCategoryId,
-                            onCategorySelected = viewModel::onCategorySelected,
-                        )
+                        if (!isCarWash) {
+                            ProductCategoryFilterRow(
+                                selectedCategoryId = selectedCategoryId,
+                                onCategorySelected = viewModel::onCategorySelected,
+                            )
+                        }
                         when {
                             uiState.products.isEmpty() && !uiState.isLoading -> {
                                 Box(
@@ -181,7 +188,11 @@ fun ShopProductsScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     ProductsEmptyState(
-                                        title = "Aún no tienes productos",
+                                        title = if (isCarWash) {
+                                            "Aún no tienes servicios"
+                                        } else {
+                                            "Aún no tienes productos"
+                                        },
                                         subtitle = "Pulsa «+ Nuevo» para crear el primero",
                                     )
                                 }
@@ -196,10 +207,19 @@ fun ShopProductsScreen(
                                     ProductsEmptyState(
                                         title = when {
                                             searchQuery.isNotBlank() ->
-                                                "Ningún producto coincide con la búsqueda"
+                                                if (isCarWash) {
+                                                    "Ningún servicio coincide con la búsqueda"
+                                                } else {
+                                                    "Ningún producto coincide con la búsqueda"
+                                                }
                                             selectedCategoryId != null ->
                                                 "No hay productos en esta categoría"
-                                            else -> "Ningún producto coincide con la búsqueda"
+                                            else ->
+                                                if (isCarWash) {
+                                                    "Ningún servicio coincide con la búsqueda"
+                                                } else {
+                                                    "Ningún producto coincide con la búsqueda"
+                                                }
                                         },
                                     )
                                 }
@@ -222,7 +242,10 @@ fun ShopProductsScreen(
 }
 
 @Composable
-private fun ProductsHeader(onNuevoClick: () -> Unit) {
+private fun ProductsHeader(
+    title: String,
+    onNuevoClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,7 +255,7 @@ private fun ProductsHeader(onNuevoClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Productos",
+            text = title,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
             color = DobbyShopColors.PurpleDark,
@@ -311,6 +334,7 @@ private fun ProductCategoryFilterRow(
 private fun ProductsSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
+    placeholder: String = "Buscar productos...",
 ) {
     Row(
         modifier = Modifier
@@ -348,7 +372,7 @@ private fun ProductsSearchBar(
                     Box {
                         if (query.isEmpty()) {
                             Text(
-                                text = "Buscar productos...",
+                                text = placeholder,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = DobbyShopColors.TextSecondary,
                             )

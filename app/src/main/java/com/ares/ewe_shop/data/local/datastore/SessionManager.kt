@@ -24,6 +24,8 @@ class SessionManager @Inject constructor(
         /** Shop id (JWT sub) after login. */
         val USER_ID = stringPreferencesKey("user_id")
         val SHOP_NAME = stringPreferencesKey("shop_name")
+        /** RESTAURANT | SHOP | SERVICE_PROVIDER | CAR_WASH */
+        val SHOP_TYPE = stringPreferencesKey("shop_type")
     }
 
     val authToken: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -46,7 +48,11 @@ class SessionManager @Inject constructor(
         prefs[Keys.USER_ID]
     }
 
-    /** Solo rota tokens (mantiene tienda id/nombre). */
+    val shopType: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SHOP_TYPE]
+    }
+
+    /** Solo rota tokens (mantiene tienda id/nombre/tipo). */
     suspend fun saveSession(accessToken: String, refreshToken: String) {
         context.dataStore.edit { prefs ->
             prefs[Keys.AUTH_TOKEN] = accessToken
@@ -58,13 +64,21 @@ class SessionManager @Inject constructor(
         accessToken: String,
         refreshToken: String,
         shopId: String?,
-        shopName: String?
+        shopName: String?,
+        shopType: String? = null,
     ) {
         context.dataStore.edit { prefs ->
             prefs[Keys.AUTH_TOKEN] = accessToken
             prefs[Keys.REFRESH_TOKEN] = refreshToken
             shopId?.let { prefs[Keys.USER_ID] = it }
             shopName?.let { prefs[Keys.SHOP_NAME] = it }
+            shopType?.let { prefs[Keys.SHOP_TYPE] = it }
+        }
+    }
+
+    suspend fun updateShopType(shopType: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SHOP_TYPE] = shopType
         }
     }
 
@@ -74,6 +88,7 @@ class SessionManager @Inject constructor(
             prefs.remove(Keys.REFRESH_TOKEN)
             prefs.remove(Keys.USER_ID)
             prefs.remove(Keys.SHOP_NAME)
+            prefs.remove(Keys.SHOP_TYPE)
         }
     }
 }

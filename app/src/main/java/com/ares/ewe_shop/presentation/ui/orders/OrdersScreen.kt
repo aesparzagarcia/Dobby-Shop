@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,88 +78,6 @@ import com.ares.ewe_shop.presentation.viewmodel.orders.OrdersViewModel
 import com.ares.ewe_shop.core.util.OrderDateFormat
 import java.util.Locale
 
-
-private data class StatusFilterChip(
-    val value: String?,
-    val label: String,
-    val dotColor: Color? = null,
-)
-
-private val statusFilters = listOf(
-    StatusFilterChip(null, "Todos"),
-    StatusFilterChip("PENDING", "Pendientes", DobbyShopColors.Orange),
-    StatusFilterChip("CONFIRMED", "Confirmados", DobbyShopColors.Blue),
-    StatusFilterChip("PREPARING", "En preparación", DobbyShopColors.Purple),
-    StatusFilterChip("READY_FOR_PICKUP", "Listo para recoger", DobbyShopColors.Teal),
-    StatusFilterChip("ASSIGNED", "Asignados", DobbyShopColors.PurpleMuted),
-    StatusFilterChip("ON_DELIVERY", "En camino", DobbyShopColors.Blue),
-    StatusFilterChip("DELIVERED", "Entregados", DobbyShopColors.Green),
-    StatusFilterChip("CANCELLED", "Cancelados", DobbyShopColors.Red),
-)
-
-private data class StatusVisual(
-    val label: String,
-    val background: Color,
-    val foreground: Color,
-    val icon: ImageVector,
-)
-
-private fun statusVisual(status: String): StatusVisual = when (status) {
-    "PENDING" -> StatusVisual(
-        "Pendiente",
-        DobbyShopColors.OrangeLight,
-        DobbyShopColors.OrangeDark,
-        Icons.Outlined.Schedule,
-    )
-    "CONFIRMED" -> StatusVisual(
-        "Confirmado",
-        DobbyShopColors.BlueLight,
-        DobbyShopColors.BlueDark,
-        Icons.Default.CheckCircle,
-    )
-    "PREPARING" -> StatusVisual(
-        "En preparación",
-        DobbyShopColors.PurpleLight,
-        DobbyShopColors.Purple,
-        Icons.Default.Inventory2,
-    )
-    "READY_FOR_PICKUP" -> StatusVisual(
-        "Listo para recoger",
-        DobbyShopColors.TealLight,
-        DobbyShopColors.TealDark,
-        Icons.Default.ShoppingBag,
-    )
-    "ASSIGNED" -> StatusVisual(
-        "Asignado",
-        DobbyShopColors.PurpleLight,
-        DobbyShopColors.PurpleDark,
-        Icons.Outlined.LocalShipping,
-    )
-    "ON_DELIVERY" -> StatusVisual(
-        "En camino",
-        DobbyShopColors.BlueLight,
-        DobbyShopColors.BlueDark,
-        Icons.Outlined.LocalShipping,
-    )
-    "DELIVERED" -> StatusVisual(
-        "Entregado",
-        DobbyShopColors.GreenLight,
-        DobbyShopColors.GreenDark,
-        Icons.Default.CheckCircle,
-    )
-    "CANCELLED" -> StatusVisual(
-        "Cancelado",
-        DobbyShopColors.RedLight,
-        DobbyShopColors.RedDark,
-        Icons.Outlined.Cancel,
-    )
-    else -> StatusVisual(
-        status,
-        DobbyShopColors.PurpleLight,
-        DobbyShopColors.Purple,
-        Icons.Default.AccessTime,
-    )
-}
 
 private fun formatOrderDate(createdAt: String): String = OrderDateFormat.formatList(createdAt)
 
@@ -228,6 +147,7 @@ fun OrdersScreen(
         ) {
             OrdersHeader(
                 shopName = shopLabel,
+                sectionLabel = uiState.ordersLabel,
                 isRefreshing = uiState.isRefreshing,
                 onRefresh = { viewModel.refresh() },
             )
@@ -236,7 +156,7 @@ fun OrdersScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(statusFilters, key = { it.label }) { chip ->
+                items(orderStatusFilters(uiState.isCarWash), key = { it.label }) { chip ->
                     StatusFilterPill(
                         label = chip.label,
                         dotColor = chip.dotColor,
@@ -245,55 +165,87 @@ fun OrdersScreen(
                     )
                 }
             }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (!uiState.isLoading || uiState.orders.isNotEmpty()) {
-                    item {
-                        OrderStatsCard(stats = uiState.orderStats)
+            when {
+                uiState.isLoading && uiState.orders.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = DobbyShopColors.Purple)
                     }
                 }
-                if (uiState.isLoading && uiState.orders.isEmpty()) {
-                    item {
+                uiState.orders.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                    ) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OrderStatsCard(
+                            stats = uiState.orderStats,
+                            totalLabel = if (uiState.isCarWash) "Total lavadas" else "Total pedidos",
+                            preparingLabel = if (uiState.isCarWash) "Lavando" else "Preparando",
+                        )
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
+                                .weight(1f)
+                                .fillMaxWidth(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(color = DobbyShopColors.Purple)
+                            Text(
+                                text = if (uiState.isCarWash) "No hay servicios" else "No hay pedidos",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = DobbyShopColors.TextSecondary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        if (!notificationsEnabled) {
+                            NotificationBanner(
+                                onActivate = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                },
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
-                } else if (uiState.orders.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No hay pedidos",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = DobbyShopColors.TextSecondary,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                        )
-                    }
-                } else {
-                    items(uiState.orders, key = { it.id }) { order ->
-                        OrderCard(
-                            order = order,
-                            onClick = { onOrderClick(order) },
-                        )
-                    }
                 }
-                if (!notificationsEnabled) {
-                    item {
-                        NotificationBanner(
-                            onActivate = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                            },
-                        )
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        item {
+                            OrderStatsCard(
+                                stats = uiState.orderStats,
+                                totalLabel = if (uiState.isCarWash) "Total lavadas" else "Total pedidos",
+                                preparingLabel = if (uiState.isCarWash) "Lavando" else "Preparando",
+                            )
+                        }
+                        items(uiState.orders, key = { it.id }) { order ->
+                            OrderCard(
+                                order = order,
+                                isCarWash = uiState.isCarWash,
+                                onClick = { onOrderClick(order) },
+                            )
+                        }
+                        if (!notificationsEnabled) {
+                            item {
+                                NotificationBanner(
+                                    onActivate = {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -304,6 +256,7 @@ fun OrdersScreen(
 @Composable
 private fun OrdersHeader(
     shopName: String,
+    sectionLabel: String,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
 ) {
@@ -325,7 +278,7 @@ private fun OrdersHeader(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "Pedidos",
+                text = sectionLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = DobbyShopColors.TextSecondary,
             )
@@ -400,14 +353,18 @@ private fun StatusFilterPill(
 }
 
 @Composable
-private fun OrderStatsCard(stats: OrderStats) {
+private fun OrderStatsCard(
+    stats: OrderStats,
+    totalLabel: String,
+    preparingLabel: String,
+) {
     val columns = listOf(
         Triple(Icons.Default.ShoppingBag, DobbyShopColors.Purple, DobbyShopColors.PurpleLight) to
-            (stats.total.toString() to "Total pedidos"),
+            (stats.total.toString() to totalLabel),
         Triple(Icons.Default.AccessTime, DobbyShopColors.Orange, DobbyShopColors.OrangeLight) to
             (stats.pending.toString() to "Pendientes"),
         Triple(Icons.Default.Inventory2, DobbyShopColors.Purple, DobbyShopColors.PurpleLight) to
-            (stats.preparing.toString() to "Preparando"),
+            (stats.preparing.toString() to preparingLabel),
         Triple(Icons.Default.CheckCircle, DobbyShopColors.Green, DobbyShopColors.GreenLight) to
             (stats.delivered.toString() to "Entregados"),
     )
@@ -494,9 +451,10 @@ private fun StatColumn(
 @Composable
 private fun OrderCard(
     order: ShopOrderDto,
+    isCarWash: Boolean,
     onClick: () -> Unit,
 ) {
-    val visual = statusVisual(order.status)
+    val visual = orderStatusVisual(order.status, isCarWash)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -509,11 +467,13 @@ private fun OrderCard(
                 .clickable(onClick = onClick)
                 .padding(16.dp),
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(end = 112.dp),
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -532,10 +492,7 @@ private fun OrderCard(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                 }
-                StatusBadge(
-                    visual = visual,
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
+                StatusBadge(visual = visual)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -609,7 +566,7 @@ private fun OrderCard(
 
 @Composable
 private fun StatusBadge(
-    visual: StatusVisual,
+    visual: OrderStatusVisual,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -631,6 +588,8 @@ private fun StatusBadge(
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             color = visual.foreground,
+            maxLines = 2,
+            softWrap = true,
         )
     }
 }

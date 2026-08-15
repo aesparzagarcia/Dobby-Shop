@@ -60,6 +60,18 @@ class OrderRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun markOrderDetailing(orderId: String): Result<Unit> {
+        return try {
+            api.markOrderDetailing(orderId)
+            Result.success(Unit)
+        } catch (e: HttpException) {
+            val message = parseErrorBody(e) ?: "Error al marcar Detallado"
+            Result.failure(Exception(message))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun rejectOrder(orderId: String): Result<Unit> {
         return try {
             api.rejectOrder(orderId)

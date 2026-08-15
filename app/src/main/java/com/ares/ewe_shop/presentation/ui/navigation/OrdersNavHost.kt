@@ -103,6 +103,7 @@ fun OrdersNavHost(
                 onRejectSuccess = popDetailAndRefreshOrders,
                 onMarkPreparingSuccess = popDetailAndRefreshOrders,
                 onReadyForPickupSuccess = popDetailAndRefreshOrders,
+                onDetailingSuccess = popDetailAndRefreshOrders,
             )
         }
     }

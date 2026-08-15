@@ -83,6 +83,7 @@ fun MainScreen(
 ) {
     val ordersRefreshFlow = ordersRefreshGeneration ?: remember { MutableStateFlow(0) }
     val ordersRefreshGen by ordersRefreshFlow.collectAsStateWithLifecycle(0)
+    val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showCreateProduct by rememberSaveable { mutableStateOf(false) }
@@ -167,6 +168,7 @@ fun MainScreen(
                 modifier = Modifier.onSizeChanged { bottomBarHeightPx = it.height },
                 tabs = tabs,
                 selectedIndex = selectedTab,
+                isCarWash = mainUiState.isCarWash,
                 onTabSelected = { selectedTab = it },
             )
         }
@@ -178,6 +180,7 @@ private fun DobbyShopBottomBar(
     modifier: Modifier = Modifier,
     tabs: List<MainTab>,
     selectedIndex: Int,
+    isCarWash: Boolean,
     onTabSelected: (Int) -> Unit,
 ) {
     Surface(
@@ -194,8 +197,14 @@ private fun DobbyShopBottomBar(
         ) {
             tabs.forEachIndexed { index, tab ->
                 val selected = selectedIndex == index
+                val title = when (tab) {
+                    MainTab.Orders -> if (isCarWash) "Lavadas" else "Pedidos"
+                    MainTab.Products -> if (isCarWash) "Servicios" else "Productos"
+                    else -> tab.title
+                }
                 DobbyShopBottomBarItem(
-                    tab = tab,
+                    title = title,
+                    icon = tab.icon,
                     selected = selected,
                     onClick = { onTabSelected(index) },
                 )
@@ -206,7 +215,8 @@ private fun DobbyShopBottomBar(
 
 @Composable
 private fun DobbyShopBottomBarItem(
-    tab: MainTab,
+    title: String,
+    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -229,14 +239,14 @@ private fun DobbyShopBottomBarItem(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = tab.icon,
-                contentDescription = tab.title,
+                imageVector = icon,
+                contentDescription = title,
                 tint = iconColor,
                 modifier = Modifier.size(22.dp),
             )
         }
         Text(
-            text = tab.title,
+            text = title,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = textColor,
             fontSize = 11.sp,

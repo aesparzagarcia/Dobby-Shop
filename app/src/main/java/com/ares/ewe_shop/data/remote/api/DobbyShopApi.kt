@@ -61,6 +61,9 @@ interface DobbyShopApi {
     @PATCH("shop/orders/{id}/ready-for-pickup")
     suspend fun markOrderReadyForPickup(@Path("id") orderId: String): AcceptRejectResponse
 
+    @PATCH("shop/orders/{id}/detailing")
+    suspend fun markOrderDetailing(@Path("id") orderId: String): AcceptRejectResponse
+
     @PATCH("shop/orders/{id}/reject")
     suspend fun rejectOrder(@Path("id") orderId: String): AcceptRejectResponse
 

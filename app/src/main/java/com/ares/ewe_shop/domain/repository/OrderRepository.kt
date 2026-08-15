@@ -12,5 +12,7 @@ interface OrderRepository {
 
     suspend fun markOrderReadyForPickup(orderId: String): Result<Unit>
 
+    suspend fun markOrderDetailing(orderId: String): Result<Unit>
+
     suspend fun rejectOrder(orderId: String): Result<Unit>
 }

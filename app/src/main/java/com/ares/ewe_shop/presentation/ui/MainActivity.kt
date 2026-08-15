@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import com.ares.ewe_shop.R
 import com.ares.ewe_shop.core.theme.DobbyShopTheme
 import com.ares.ewe_shop.presentation.ui.navigation.DobbyShopNavigation
 import com.ares.ewe_shop.realtime.OrderRealtimeBus
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_DobbyShop)
         super.onCreate(savedInstanceState)
         consumeOrderIdFromIntent(intent)
         enableEdgeToEdge()
