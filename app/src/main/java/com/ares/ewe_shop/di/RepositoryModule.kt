@@ -1,10 +1,14 @@
 package com.ares.ewe_shop.di
 
+import com.ares.ewe_shop.data.location.FusedLocationProvider
+import com.ares.ewe_shop.data.location.LocationProvider
 import com.ares.ewe_shop.data.repository.AuthRepositoryImpl
+import com.ares.ewe_shop.data.repository.DirectionsRepositoryImpl
 import com.ares.ewe_shop.data.repository.OrderRepositoryImpl
 import com.ares.ewe_shop.data.repository.ProductRepositoryImpl
 import com.ares.ewe_shop.data.repository.ShopProfileRepositoryImpl
 import com.ares.ewe_shop.domain.repository.AuthRepository
+import com.ares.ewe_shop.domain.repository.DirectionsRepository
 import com.ares.ewe_shop.domain.repository.OrderRepository
 import com.ares.ewe_shop.domain.repository.ProductRepository
 import com.ares.ewe_shop.domain.repository.ShopProfileRepository
@@ -33,4 +37,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindShopProfileRepository(impl: ShopProfileRepositoryImpl): ShopProfileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDirectionsRepository(impl: DirectionsRepositoryImpl): DirectionsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLocationProvider(impl: FusedLocationProvider): LocationProvider
 }

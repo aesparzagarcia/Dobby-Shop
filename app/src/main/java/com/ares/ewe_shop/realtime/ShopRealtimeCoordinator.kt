@@ -15,6 +15,7 @@ class ShopRealtimeCoordinator @Inject constructor(
     private val shopFirebaseAuth: ShopFirebaseAuth,
     private val pushTokenRegistrar: ShopPushTokenRegistrar,
     private val orderRealtimeListener: ShopOrderRealtimeListener,
+    private val orderRealtimeBus: OrderRealtimeBus,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -24,6 +25,20 @@ class ShopRealtimeCoordinator @Inject constructor(
             shopFirebaseAuth.signInWithBackendToken()
             pushTokenRegistrar.registerCurrentToken()
             orderRealtimeListener.start()
+        }
+    }
+
+    /**
+     * After background, re-attach Firestore and wake UI collectors.
+     * Needed because system tray FCM often skips [onMessageReceived], so the bus never fires.
+     */
+    fun resumeAfterBackground() {
+        scope.launch {
+            if (!sessionManager.isLoggedIn.first()) return@launch
+            shopFirebaseAuth.signInWithBackendToken()
+            orderRealtimeListener.resume()
+            // Catch-up even if the first snapshot is delayed.
+            orderRealtimeBus.notifyOrdersChanged()
         }
     }
 

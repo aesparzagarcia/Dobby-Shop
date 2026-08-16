@@ -87,12 +87,14 @@ fun MainScreen(
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showCreateProduct by rememberSaveable { mutableStateOf(false) }
+    var hideBottomBarForDeliveryMap by rememberSaveable { mutableStateOf(false) }
     var productCreatedMessage by remember { mutableStateOf<String?>(null) }
     var productBeingEdited by remember { mutableStateOf<ShopProductDto?>(null) }
     val tabs = listOf(MainTab.Orders, MainTab.Products, MainTab.Profile)
     var bottomBarHeightPx by remember { mutableIntStateOf(0) }
+    val hideBottomBar = showCreateProduct || hideBottomBarForDeliveryMap
     val bottomBarInsets = WindowInsets(bottom = bottomBarHeightPx)
-    val contentImeInsets = if (showCreateProduct) {
+    val contentImeInsets = if (hideBottomBar) {
         WindowInsets.ime
     } else {
         WindowInsets.ime.exclude(bottomBarInsets)
@@ -100,7 +102,7 @@ fun MainScreen(
 
     val density = LocalDensity.current
     val bottomBarPadding = with(density) {
-        if (showCreateProduct) 0.dp else bottomBarHeightPx.toDp()
+        if (hideBottomBar) 0.dp else bottomBarHeightPx.toDp()
     }
 
     LaunchedEffect(pendingOrderId) {
@@ -140,6 +142,7 @@ fun MainScreen(
                         ordersRefreshGeneration = ordersRefreshGen,
                         pendingOrderId = pendingOrderId,
                         onPendingOrderNavigated = onPendingOrderNavigated,
+                        onDeliveryMapVisibleChange = { hideBottomBarForDeliveryMap = it },
                         modifier = Modifier.fillMaxSize(),
                     )
                     1 -> ShopProductsScreen(
@@ -163,7 +166,7 @@ fun MainScreen(
             }
         }
         }
-        if (!showCreateProduct) {
+        if (!hideBottomBar) {
             DobbyShopBottomBar(
                 modifier = Modifier.onSizeChanged { bottomBarHeightPx = it.height },
                 tabs = tabs,

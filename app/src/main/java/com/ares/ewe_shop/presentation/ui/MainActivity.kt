@@ -98,6 +98,8 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         if (wasStopped) {
             wasStopped = false
+            // Background FCM often never hits the realtime bus; re-attach Firestore + force refresh.
+            shopRealtimeCoordinator.resumeAfterBackground()
             orderRealtimeBus.notifyOrdersChanged()
         }
     }

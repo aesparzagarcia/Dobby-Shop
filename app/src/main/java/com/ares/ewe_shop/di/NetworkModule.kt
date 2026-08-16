@@ -4,6 +4,7 @@ import com.ares.ewe_shop.BuildConfig
 import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.TokenRefreshInterceptor
 import com.ares.ewe_shop.data.remote.api.DobbyShopApi
+import com.ares.ewe_shop.data.remote.api.GoogleDirectionsApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,6 +17,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -84,5 +86,27 @@ class NetworkModule {
     @Singleton
     fun provideDobbyShopApi(retrofit: Retrofit): DobbyShopApi {
         return retrofit.create(DobbyShopApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("GoogleRetrofit")
+    fun provideGoogleRetrofit(): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://maps.googleapis.com/maps/api/")
+            .client(
+                OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .build()
+            )
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoogleDirectionsApi(@Named("GoogleRetrofit") retrofit: Retrofit): GoogleDirectionsApi {
+        return retrofit.create(GoogleDirectionsApi::class.java)
     }
 }

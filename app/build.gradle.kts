@@ -11,6 +11,19 @@ plugins {
     alias(libs.plugins.firebase.crashlytics)
 }
 
+// Load local.properties so MAPS_API_KEY is available (Gradle does not load it by default).
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.reader(Charsets.UTF_8).use { localProperties.load(it) }
+}
+val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY")
+    ?: (project.findProperty("MAPS_API_KEY") as String?)
+    ?: ""
+val directionsApiKey: String = localProperties.getProperty("DIRECTIONS_API_KEY")
+    ?: (project.findProperty("DIRECTIONS_API_KEY") as String?)
+    ?: mapsApiKey
+
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
@@ -32,6 +45,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Google Maps / Directions (misma llave que DobbyGo; define en local.properties).
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
+        buildConfigField("String", "DIRECTIONS_API_KEY", "\"$directionsApiKey\"")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     flavorDimensions += "environment"

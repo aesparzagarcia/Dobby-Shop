@@ -23,6 +23,7 @@ data class OrderDetailUiState(
     val isPreparing: Boolean = false,
     val isReadyForPickup: Boolean = false,
     val isDetailing: Boolean = false,
+    val isMarkingOnDelivery: Boolean = false,
     val isRejecting: Boolean = false,
     val errorMessage: String? = null,
     val actionSuccess: Boolean = false
@@ -103,48 +104,45 @@ class OrderDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isPreparing = true, errorMessage = null)
             orderRepository.markOrderPreparing(orderId, estimatedPreparationMinutes)
                 .onSuccess {
-                    val carWash = _uiState.value.isCarWash
-                    if (carWash) {
-                        // Carwash: este botón avanza hasta Secado y Aspirado (READY_FOR_PICKUP).
-                        orderRepository.markOrderReadyForPickup(orderId)
-                            .onSuccess {
-                                _uiState.value = _uiState.value.copy(
-                                    order = _uiState.value.order?.copy(
-                                        status = "READY_FOR_PICKUP",
-                                        estimatedPreparationMinutes = estimatedPreparationMinutes,
-                                    ),
-                                    isPreparing = false,
-                                    actionSuccess = true,
-                                )
-                                onSuccess()
-                            }
-                            .onFailure { e ->
-                                _uiState.value = _uiState.value.copy(
-                                    order = _uiState.value.order?.copy(
-                                        status = "PREPARING",
-                                        estimatedPreparationMinutes = estimatedPreparationMinutes,
-                                    ),
-                                    isPreparing = false,
-                                    errorMessage = e.message
-                                        ?: "Se marcó lavando, pero no se pudo pasar a Secado y Aspirado",
-                                )
-                            }
-                    } else {
-                        _uiState.value = _uiState.value.copy(
-                            order = _uiState.value.order?.copy(
-                                status = "PREPARING",
-                                estimatedPreparationMinutes = estimatedPreparationMinutes,
-                            ),
-                            isPreparing = false,
-                            actionSuccess = true,
-                        )
-                        onSuccess()
-                    }
+                    _uiState.value = _uiState.value.copy(
+                        order = _uiState.value.order?.copy(
+                            status = "PREPARING",
+                            estimatedPreparationMinutes = estimatedPreparationMinutes,
+                        ),
+                        isPreparing = false,
+                        actionSuccess = true,
+                    )
+                    onSuccess()
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         isPreparing = false,
                         errorMessage = e.message ?: "Error al marcar en preparación",
+                    )
+                }
+        }
+    }
+
+    /** Carwash: CONFIRMED → OUT_FOR_PICKUP con tiempo estimado para recoger el carro. */
+    fun markOutForPickup(estimatedPreparationMinutes: Int, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isPreparing = true, errorMessage = null)
+            orderRepository.markOrderOutForPickup(orderId, estimatedPreparationMinutes)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        order = _uiState.value.order?.copy(
+                            status = "OUT_FOR_PICKUP",
+                            estimatedPreparationMinutes = estimatedPreparationMinutes,
+                        ),
+                        isPreparing = false,
+                        actionSuccess = true,
+                    )
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isPreparing = false,
+                        errorMessage = e.message ?: "Error al salir a recoger el carro",
                     )
                 }
         }
@@ -186,6 +184,27 @@ class OrderDetailViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isDetailing = false,
                         errorMessage = e.message ?: "Error al marcar Detallado",
+                    )
+                }
+        }
+    }
+
+    fun markOnDelivery(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMarkingOnDelivery = true, errorMessage = null)
+            orderRepository.markOrderOnDelivery(orderId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        order = _uiState.value.order?.copy(status = "ON_DELIVERY"),
+                        isMarkingOnDelivery = false,
+                        actionSuccess = true,
+                    )
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isMarkingOnDelivery = false,
+                        errorMessage = e.message ?: "Error al marcar En camino",
                     )
                 }
         }

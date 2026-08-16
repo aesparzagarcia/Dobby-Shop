@@ -141,6 +141,7 @@ private fun formatDetailOrderDate(createdAt: String): String = OrderDateFormat.f
 @Composable
 private fun EstimatedPrepTimePickerDialog(
     initialMinutes: Int?,
+    isCarWash: Boolean = false,
     onDismiss: () -> Unit,
     onConfirm: (totalMinutes: Int) -> Unit,
 ) {
@@ -152,7 +153,12 @@ private fun EstimatedPrepTimePickerDialog(
     )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Duración estimada de preparación") },
+        title = {
+            Text(
+                if (isCarWash) "Tiempo estimado para recoger el carro"
+                else "Duración estimada de preparación",
+            )
+        },
         text = { TimePicker(state = state) },
         confirmButton = {
             TextButton(
@@ -181,6 +187,9 @@ fun OrderDetailScreen(
     onMarkPreparingSuccess: () -> Unit,
     onReadyForPickupSuccess: () -> Unit,
     onDetailingSuccess: () -> Unit,
+    onOnDeliverySuccess: () -> Unit,
+    onOpenDeliveryMap: () -> Unit,
+    onOpenPickupMap: () -> Unit = onOpenDeliveryMap,
     viewModel: OrderDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -189,11 +198,27 @@ fun OrderDetailScreen(
     var showPrepTimePicker by rememberSaveable { mutableStateOf(false) }
     var estimatedPrepMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
     var showPrepInstructionNotice by rememberSaveable { mutableStateOf(true) }
+    var deliveryMapOpened by rememberSaveable { mutableStateOf(false) }
 
     BackHandler(onBack = onBack)
 
     LaunchedEffect(Unit) {
         viewModel.loadOrder(null)
+    }
+
+    // Carwash en ruta (recolección o entrega): abrir mapa.
+    LaunchedEffect(uiState.isCarWash, uiState.order?.status) {
+        val status = uiState.order?.status
+        if (uiState.isCarWash && status == "OUT_FOR_PICKUP" && !deliveryMapOpened) {
+            deliveryMapOpened = true
+            onOpenPickupMap()
+        } else if (uiState.isCarWash && status == "PICKED_UP" && !deliveryMapOpened) {
+            deliveryMapOpened = true
+            onOpenPickupMap()
+        } else if (uiState.isCarWash && status == "ON_DELIVERY" && !deliveryMapOpened) {
+            deliveryMapOpened = true
+            onOpenDeliveryMap()
+        }
     }
 
     LaunchedEffect(uiState.actionSuccess) {
@@ -254,7 +279,13 @@ fun OrderDetailScreen(
                 else -> {
                     val order = uiState.order!!
                     val hasBottomActions = order.status in setOf("PENDING", "CONFIRMED", "PREPARING") ||
-                        (order.status == "READY_FOR_PICKUP" && uiState.isCarWash)
+                        (uiState.isCarWash && order.status in setOf(
+                            "OUT_FOR_PICKUP",
+                            "PICKED_UP",
+                            "READY_FOR_PICKUP",
+                            "ASSIGNED",
+                            "ON_DELIVERY",
+                        ))
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -289,17 +320,24 @@ fun OrderDetailScreen(
                                     }
                                 }
                                 "ON_DELIVERY" -> {
-                                    PickupHandoffCodeCard(
-                                        orderId = order.id,
-                                        pickupCode = null,
-                                        customerLabel = formatCustomerLabel(order),
-                                        courierName = order.deliveryMan?.name,
-                                        handedOff = true,
-                                    )
+                                    // En carwash la tienda es quien entrega: no hay repartidor externo.
+                                    if (!uiState.isCarWash) {
+                                        PickupHandoffCodeCard(
+                                            orderId = order.id,
+                                            pickupCode = null,
+                                            customerLabel = formatCustomerLabel(order),
+                                            courierName = order.deliveryMan?.name,
+                                            handedOff = true,
+                                        )
+                                    }
                                 }
                             }
                             order.estimatedPreparationMinutes?.takeIf { it > 0 }?.let { mins ->
-                                EstimatedPrepInfoCard(minutes = mins)
+                                EstimatedPrepInfoCard(
+                                    minutes = mins,
+                                    isPickupEta = uiState.isCarWash &&
+                                        order.status in setOf("CONFIRMED", "OUT_FOR_PICKUP"),
+                                )
                             }
                         }
                     }
@@ -360,6 +398,7 @@ fun OrderDetailScreen(
                             if (showPrepTimePicker) {
                                 EstimatedPrepTimePickerDialog(
                                     initialMinutes = estimatedPrepMinutes,
+                                    isCarWash = uiState.isCarWash,
                                     onDismiss = { showPrepTimePicker = false },
                                     onConfirm = { total ->
                                         estimatedPrepMinutes = if (total in 1..1440) total else null
@@ -394,12 +433,20 @@ fun OrderDetailScreen(
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp),
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (estimatedPrepMinutes != null) {
-                                        "Tiempo estimado: ${formatPrepDurationMinutes(estimatedPrepMinutes!!)}"
+                                        if (uiState.isCarWash) {
+                                            "Tiempo estimado para recoger carro: ${formatPrepDurationMinutes(estimatedPrepMinutes!!)}"
+                                        } else {
+                                            "Tiempo estimado: ${formatPrepDurationMinutes(estimatedPrepMinutes!!)}"
+                                        }
                                     } else {
-                                        "Seleccionar tiempo estimado"
+                                        if (uiState.isCarWash) {
+                                            "Seleccionar tiempo estimado para recoger carro"
+                                        } else {
+                                            "Seleccionar tiempo estimado"
+                                        }
                                     },
                                     fontWeight = FontWeight.Medium,
                                 )
@@ -408,8 +455,14 @@ fun OrderDetailScreen(
                                 estimatedPrepMinutes!! in 1..1440
                             Button(
                                 onClick = {
-                                    estimatedPrepMinutes?.let {
-                                        viewModel.markPreparing(it, onMarkPreparingSuccess)
+                                    estimatedPrepMinutes?.let { mins ->
+                                        if (uiState.isCarWash) {
+                                            viewModel.markOutForPickup(mins) {
+                                                onOpenPickupMap()
+                                            }
+                                        } else {
+                                            viewModel.markPreparing(mins, onMarkPreparingSuccess)
+                                        }
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -435,13 +488,34 @@ fun OrderDetailScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = if (uiState.isCarWash) {
-                                            "Marcar Secado y Aspirado"
+                                            "Ir a recoger el carro"
                                         } else {
                                             "Marcar en preparación"
                                         },
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
+                            }
+                        }
+
+                        if (order.status in setOf("OUT_FOR_PICKUP", "PICKED_UP") && uiState.isCarWash) {
+                            Button(
+                                onClick = onOpenPickupMap,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DobbyShopColors.Purple,
+                                    contentColor = Color.White,
+                                ),
+                            ) {
+                                Text(
+                                    text = if (order.status == "PICKED_UP") {
+                                        "Abrir mapa al autolavado"
+                                    } else {
+                                        "Abrir mapa de recolección"
+                                    },
+                                    fontWeight = FontWeight.SemiBold,
+                                )
                             }
                         }
 
@@ -487,6 +561,57 @@ fun OrderDetailScreen(
                                 } else {
                                     Text(
                                         text = "Pasar a Detallado",
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                        }
+
+                        if (order.status == "ON_DELIVERY" && uiState.isCarWash) {
+                            Button(
+                                onClick = {
+                                    deliveryMapOpened = true
+                                    onOpenDeliveryMap()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DobbyShopColors.Purple,
+                                    contentColor = Color.White,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Abrir mapa de entrega",
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+
+                        if (order.status == "ASSIGNED" && uiState.isCarWash) {
+                            Button(
+                                onClick = {
+                                    deliveryMapOpened = true
+                                    viewModel.markOnDelivery(onOnDeliverySuccess)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !uiState.isMarkingOnDelivery,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DobbyShopColors.Purple,
+                                    contentColor = Color.White,
+                                ),
+                            ) {
+                                if (uiState.isMarkingOnDelivery) {
+                                    ActionLoadingIndicator(color = Color.White)
+                                } else {
+                                    Text(
+                                        text = "Pasar a entregar",
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
@@ -807,7 +932,7 @@ private fun PrepInstructionNotice(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun EstimatedPrepInfoCard(minutes: Int) {
+private fun EstimatedPrepInfoCard(minutes: Int, isPickupEta: Boolean = false) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -816,11 +941,20 @@ private fun EstimatedPrepInfoCard(minutes: Int) {
         Row(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            DetailIconBox(icon = Icons.Default.AccessTime)
+            Icon(
+                imageVector = Icons.Default.AccessTime,
+                contentDescription = null,
+                tint = DobbyShopColors.Purple,
+                modifier = Modifier.size(18.dp),
+            )
             Text(
-                text = "Tiempo estimado de preparación: ${formatPrepDurationMinutes(minutes)}",
+                text = if (isPickupEta) {
+                    "Tiempo estimado para recoger carro: ${formatPrepDurationMinutes(minutes)}"
+                } else {
+                    "Tiempo estimado: ${formatPrepDurationMinutes(minutes)}"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = DobbyShopColors.PurpleDark,
             )

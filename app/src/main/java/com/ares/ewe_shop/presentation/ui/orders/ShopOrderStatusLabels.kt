@@ -46,10 +46,12 @@ internal fun orderStatusFilters(isCarWash: Boolean): List<StatusFilterChip> {
         StatusFilterChip(null, "Todos"),
         StatusFilterChip("PENDING", "Pendientes", DobbyShopColors.Orange),
         StatusFilterChip("CONFIRMED", "Confirmados", DobbyShopColors.Blue),
+        StatusFilterChip("OUT_FOR_PICKUP", "En camino", DobbyShopColors.Blue),
+        StatusFilterChip("PICKED_UP", "Recogido", DobbyShopColors.Blue),
         StatusFilterChip("PREPARING", "Lavando", DobbyShopColors.Purple),
         StatusFilterChip("READY_FOR_PICKUP", "Secado y Aspirado", DobbyShopColors.Teal),
         StatusFilterChip("ASSIGNED", "Detallado", DobbyShopColors.PurpleMuted),
-        StatusFilterChip("ON_DELIVERY", "En camino", DobbyShopColors.Blue),
+        StatusFilterChip("ON_DELIVERY", "En entrega", DobbyShopColors.Blue),
         StatusFilterChip("DELIVERED", "Entregados", DobbyShopColors.Green),
         StatusFilterChip("CANCELLED", "Cancelados", DobbyShopColors.Red),
     )
@@ -69,6 +71,18 @@ internal fun orderStatusVisual(status: String, isCarWash: Boolean): OrderStatusV
             DobbyShopColors.BlueLight,
             DobbyShopColors.BlueDark,
             Icons.Default.CheckCircle,
+        )
+        "OUT_FOR_PICKUP" -> OrderStatusVisual(
+            label,
+            DobbyShopColors.BlueLight,
+            DobbyShopColors.BlueDark,
+            Icons.Default.DirectionsCar,
+        )
+        "PICKED_UP" -> OrderStatusVisual(
+            label,
+            DobbyShopColors.BlueLight,
+            DobbyShopColors.BlueDark,
+            Icons.Default.DirectionsCar,
         )
         "PREPARING" -> OrderStatusVisual(
             label,
@@ -133,10 +147,12 @@ internal fun orderStatusLabel(status: String, isCarWash: Boolean): String {
     return when (status) {
         "PENDING" -> "Pendiente"
         "CONFIRMED" -> "Confirmado"
+        "OUT_FOR_PICKUP" -> "En camino"
+        "PICKED_UP" -> "Recogido"
         "PREPARING" -> "Lavando"
         "READY_FOR_PICKUP" -> "Secado y Aspirado"
         "ASSIGNED" -> "Detallado"
-        "ON_DELIVERY" -> "En camino"
+        "ON_DELIVERY" -> "En entrega"
         "DELIVERED" -> "Entregado"
         "CANCELLED" -> "Cancelado"
         else -> status

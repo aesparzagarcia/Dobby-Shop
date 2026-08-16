@@ -38,10 +38,21 @@ class ShopOrderRealtimeListener @Inject constructor(
                 .collection("shops")
                 .document(shopId)
                 .collection("order_signals")
-                .addSnapshotListener { _, _ ->
+                .addSnapshotListener { snapshot, _ ->
+                    // Any snapshot (incl. reconnect) should wake UI — not only documentChanges.
+                    if (snapshot == null) {
+                        orderRealtimeBus.notifyOrdersChanged()
+                        return@addSnapshotListener
+                    }
                     orderRealtimeBus.notifyOrdersChanged()
                 }
         }
+    }
+
+    /** Force re-attach after background (parity with Dobby consumer / iOS resume). */
+    fun resume() {
+        stop()
+        start()
     }
 
     fun stop() {

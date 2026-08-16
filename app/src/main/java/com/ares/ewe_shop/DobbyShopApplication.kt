@@ -16,5 +16,6 @@ class DobbyShopApplication : Application() {
         super.onCreate()
         CrashlyticsJourney.setApp("dobby_shop")
         proactiveShopAccessTokenRefresh.start()
+        MapsInitializerFacade.initializeLatestRenderer(applicationContext)
     }
 }
