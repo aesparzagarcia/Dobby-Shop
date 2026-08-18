@@ -442,6 +442,9 @@ fun CarWashDeliveryMapScreen(
                         isSubmittingCustomerRating = uiState.isSubmittingCustomerRating,
                         onDeliveryCodeChange = viewModel::onDeliveryCodeChange,
                         onMarkArrived = viewModel::markArrived,
+                        onStartServiceAtShop = {
+                            viewModel.startServiceAtShop(onSuccess = onDeliveredSuccess)
+                        },
                         onMarkDelivered = { viewModel.markDelivered(onSuccess = onDeliveredSuccess) },
                         onStarsChange = viewModel::setCustomerRatingStars,
                         onTogglePunctual = viewModel::toggleCustomerPunctual,
@@ -602,6 +605,7 @@ private fun CarWashDeliveryBottomPanel(
     isSubmittingCustomerRating: Boolean,
     onDeliveryCodeChange: (String) -> Unit,
     onMarkArrived: () -> Unit,
+    onStartServiceAtShop: () -> Unit,
     onMarkDelivered: () -> Unit,
     onStarsChange: (Int) -> Unit,
     onTogglePunctual: () -> Unit,
@@ -765,7 +769,47 @@ private fun CarWashDeliveryBottomPanel(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (!hasMarkedArrived) {
+                if (isReturnToShopTrip) {
+                    val canStartService = isNearCustomer && !isStartingWash && !isMarkingArrived
+                    Button(
+                        onClick = onStartServiceAtShop,
+                        enabled = canStartService,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(26.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DobbyShopColors.Purple,
+                            disabledContainerColor = DobbyShopColors.Border,
+                            contentColor = Color.White,
+                            disabledContentColor = DobbyShopColors.TextSecondary,
+                        ),
+                    ) {
+                        if (isStartingWash || isMarkingArrived) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Text(
+                                text = "Empezar a lavar",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp,
+                            )
+                        }
+                    }
+                    if (!canStartService && !isStartingWash && !isMarkingArrived) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "El botón se habilitará cuando estés en el autolavado.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = DobbyShopColors.TextSecondary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                } else if (!hasMarkedArrived) {
                     val canMarkArrived = isNearCustomer && !isMarkingArrived
                     Button(
                         onClick = onMarkArrived,
@@ -798,57 +842,12 @@ private fun CarWashDeliveryBottomPanel(
                     if (!canMarkArrived && !isMarkingArrived) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (isReturnToShopTrip) {
-                                "El botón se habilitará cuando estés en el autolavado."
-                            } else {
-                                "El botón se habilitará cuando estés en la ubicación del cliente."
-                            },
+                            text = "El botón se habilitará cuando estés en la ubicación del cliente.",
                             style = MaterialTheme.typography.labelSmall,
                             color = DobbyShopColors.TextSecondary,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                    }
-                } else if (isReturnToShopTrip) {
-                    Text(
-                        text = "Carro en el autolavado",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = DobbyShopColors.TextPrimary,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Cuando el carro esté en el local, inicia el lavado.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DobbyShopColors.TextSecondary,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = onMarkDelivered,
-                        enabled = hasMarkedArrived && !isStartingWash,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(26.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DobbyShopColors.Purple,
-                            disabledContainerColor = DobbyShopColors.Purple.copy(alpha = 0.5f),
-                        ),
-                    ) {
-                        if (isStartingWash) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Text(
-                                text = "Iniciar lavado",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp,
-                                color = Color.White,
-                            )
-                        }
                     }
                 } else {
                     Text(

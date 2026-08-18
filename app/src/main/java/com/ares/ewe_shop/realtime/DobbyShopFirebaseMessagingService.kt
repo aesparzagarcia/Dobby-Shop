@@ -31,7 +31,21 @@ class DobbyShopFirebaseMessagingService : FirebaseMessagingService() {
         when (type) {
             "shop_new_order",
             "shop_courier_assigned",
-            "order_status" -> orderRealtimeBus.notifyOrdersChanged()
+            "order_status" -> {
+                val orderId = message.data["order_id"]
+                val fallback = ShopOrderNotificationHelper.titleAndBodyForShopPush(
+                    type = type,
+                    status = message.data["status"],
+                    shopType = message.data["shop_type"],
+                    deliveryManName = message.data["delivery_man_name"],
+                    titleFromData = message.data["title"],
+                    bodyFromData = message.data["body"],
+                )
+                val title = message.notification?.title ?: fallback.first
+                val body = message.notification?.body ?: fallback.second
+                ShopOrderNotificationHelper.show(this, title, body, orderId)
+                orderRealtimeBus.notifyOrdersChanged()
+            }
         }
     }
 }

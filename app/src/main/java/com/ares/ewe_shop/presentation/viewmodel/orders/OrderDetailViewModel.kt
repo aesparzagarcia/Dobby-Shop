@@ -51,18 +51,20 @@ class OrderDetailViewModel @Inject constructor(
         }
         viewModelScope.launch {
             orderRealtimeBus.refreshOrders.collect {
-                loadOrder(null)
+                loadOrder(null, silent = true)
             }
         }
     }
 
-    fun loadOrder(ordersFromList: List<ShopOrderDto>?) {
+    fun loadOrder(ordersFromList: List<ShopOrderDto>?, silent: Boolean = false) {
         val order = ordersFromList?.firstOrNull { it.id == orderId }
         if (order != null) {
             _uiState.value = _uiState.value.copy(order = order)
             return
         }
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+        if (!silent) {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+        }
         viewModelScope.launch {
             orderRepository.getOrders(null)
                 .onSuccess { list ->
@@ -71,7 +73,7 @@ class OrderDetailViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
-                        errorMessage = e.message ?: "Error al cargar el pedido",
+                        errorMessage = if (silent) _uiState.value.errorMessage else (e.message ?: "Error al cargar el pedido"),
                         isLoading = false
                     )
                 }

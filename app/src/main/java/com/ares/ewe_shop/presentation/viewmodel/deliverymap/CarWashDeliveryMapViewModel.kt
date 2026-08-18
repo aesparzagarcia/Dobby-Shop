@@ -287,7 +287,13 @@ class CarWashDeliveryMapViewModel @Inject constructor(
 
     fun markArrived() {
         val state = _uiState.value
-        if (orderId.isBlank() || state.isMarkingArrived || state.hasMarkedArrived) return
+        if (orderId.isBlank() ||
+            state.isMarkingArrived ||
+            state.hasMarkedArrived ||
+            !state.isNearCustomer
+        ) {
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isMarkingArrived = true, errorMessage = null)
             orderRepository.markArrivedAtCustomer(orderId)
@@ -303,6 +309,53 @@ class CarWashDeliveryMapViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isMarkingArrived = false,
                         errorMessage = e.message ?: "Error al registrar la llegada",
+                    )
+                }
+        }
+    }
+
+    /**
+     * Regreso al autolavado: un solo paso (llegada + inicio de lavado → PREPARING / Lavando).
+     * Solo cuando el GPS está en el local.
+     */
+    fun startServiceAtShop(onSuccess: () -> Unit) {
+        val state = _uiState.value
+        if (orderId.isBlank() ||
+            !state.isReturnToShopTrip ||
+            !state.isNearCustomer ||
+            state.isStartingWash ||
+            state.isMarkingArrived
+        ) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isStartingWash = true, errorMessage = null)
+            if (!state.hasMarkedArrived) {
+                val arrived = orderRepository.markArrivedAtCustomer(orderId)
+                if (arrived.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        isStartingWash = false,
+                        errorMessage = arrived.exceptionOrNull()?.message
+                            ?: "Error al registrar la llegada al autolavado",
+                    )
+                    return@launch
+                }
+                _uiState.value = _uiState.value.copy(hasMarkedArrived = true)
+            }
+            orderRepository.markOrderStartWash(orderId)
+                .onSuccess {
+                    stopLocationTracking()
+                    _uiState.value = _uiState.value.copy(
+                        isStartingWash = false,
+                        isReturnToShopTrip = false,
+                        orderStatus = "PREPARING",
+                    )
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isStartingWash = false,
+                        errorMessage = e.message ?: "Error al iniciar el servicio",
                     )
                 }
         }

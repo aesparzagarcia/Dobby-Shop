@@ -22,7 +22,6 @@ class ShopRealtimeCoordinator @Inject constructor(
     fun onSessionReady() {
         scope.launch {
             if (!sessionManager.isLoggedIn.first()) return@launch
-            shopFirebaseAuth.signInWithBackendToken()
             pushTokenRegistrar.registerCurrentToken()
             orderRealtimeListener.start()
         }
@@ -35,7 +34,6 @@ class ShopRealtimeCoordinator @Inject constructor(
     fun resumeAfterBackground() {
         scope.launch {
             if (!sessionManager.isLoggedIn.first()) return@launch
-            shopFirebaseAuth.signInWithBackendToken()
             orderRealtimeListener.resume()
             // Catch-up even if the first snapshot is delayed.
             orderRealtimeBus.notifyOrdersChanged()
