@@ -106,7 +106,10 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val MARKER_ICON_SIZE_DP = 46 // ~5% smaller than 48dp
+private const val MARKER_ICON_SIZE_DP = 39 // −10% extra sobre 43dp (parity Dobby)
+private const val DELIVERY_MARKER_ICON_SIZE_DP = 39 // −5% extra sobre 41dp (repartidor/moto)
+/** Carro negro: 25% más chico que [MARKER_ICON_SIZE_DP]. */
+private const val CAR_MARKER_ICON_SIZE_DP = 29
 
 private fun bitmapDescriptorFromRes(
     context: Context,
@@ -151,7 +154,8 @@ fun CarWashDeliveryMapScreen(
     val scope = rememberCoroutineScope()
     var houseIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var shopIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
-    var vehicleIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var carIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var deliveryIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     BackHandler(onBack = onBack)
 
@@ -203,8 +207,15 @@ fun CarWashDeliveryMapScreen(
         if (shopIcon == null) {
             shopIcon = bitmapDescriptorFromRes(context, R.drawable.ic_car_wash)
         }
-        if (vehicleIcon == null) {
-            vehicleIcon = bitmapDescriptorFromRes(context, R.drawable.ic_car)
+        if (carIcon == null) {
+            carIcon = bitmapDescriptorFromRes(context, R.drawable.ic_car, CAR_MARKER_ICON_SIZE_DP)
+        }
+        if (deliveryIcon == null) {
+            deliveryIcon = bitmapDescriptorFromRes(
+                context,
+                R.drawable.ic_delivery,
+                DELIVERY_MARKER_ICON_SIZE_DP,
+            )
         }
     }
 
@@ -215,10 +226,11 @@ fun CarWashDeliveryMapScreen(
         }
     }
 
-    // Otro dispositivo avanzó el pedido: salir del mapa (salvo rating post-entrega).
-    LaunchedEffect(uiState.orderStatus, uiState.showCustomerRating, uiState.isLoading) {
+    // Otro dispositivo avanzó el pedido: salir del mapa (salvo rating post-entrega o preview).
+    LaunchedEffect(uiState.orderStatus, uiState.showCustomerRating, uiState.isLoading, uiState.isRoutePreview) {
         val status = uiState.orderStatus ?: return@LaunchedEffect
         if (uiState.isLoading || uiState.showCustomerRating) return@LaunchedEffect
+        if (uiState.isRoutePreview) return@LaunchedEffect
         if (status !in setOf("OUT_FOR_PICKUP", "PICKED_UP", "ON_DELIVERY", "DELIVERED")) {
             onDeliveredSuccess()
         }
@@ -269,6 +281,7 @@ fun CarWashDeliveryMapScreen(
             CarWashDeliveryTopBar(
                 onBack = onBack,
                 title = when {
+                    uiState.isRoutePreview -> "Ruta al cliente"
                     uiState.isPickupTrip -> "En camino a recoger"
                     uiState.isReturnToShopTrip -> "Regreso al autolavado"
                     else -> "Entrega en camino"
@@ -343,14 +356,32 @@ fun CarWashDeliveryMapScreen(
                         icon = houseIcon ?: bitmapDescriptorFromRes(context, R.drawable.ic_house),
                     )
                 }
-                uiState.currentLocation?.let { latLng ->
-                    Marker(
-                        state = MarkerState(position = latLng),
-                        title = "Tu ubicación",
-                        icon = vehicleIcon
-                            ?: bitmapDescriptorFromRes(context, R.drawable.ic_car)
-                            ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
-                    )
+                // En preview solo carwash + casa; en viaje activo: GPS del repartidor.
+                // En camino a recoger → moto (ic_delivery); con carro / entrega → auto.
+                if (!uiState.isRoutePreview) {
+                    uiState.currentLocation?.let { latLng ->
+                        val useDeliveryScooter = uiState.isPickupTrip
+                        val selfIcon = if (useDeliveryScooter) {
+                            deliveryIcon
+                                ?: bitmapDescriptorFromRes(
+                                    context,
+                                    R.drawable.ic_delivery,
+                                    DELIVERY_MARKER_ICON_SIZE_DP,
+                                )
+                        } else {
+                            carIcon ?: bitmapDescriptorFromRes(
+                                context,
+                                R.drawable.ic_car,
+                                CAR_MARKER_ICON_SIZE_DP,
+                            )
+                        }
+                        Marker(
+                            state = MarkerState(position = latLng),
+                            title = if (useDeliveryScooter) "Repartidor" else "Tu ubicación",
+                            icon = selfIcon
+                                ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                        )
+                    }
                 }
             }
 
@@ -417,7 +448,9 @@ fun CarWashDeliveryMapScreen(
                     }
                 }
 
-                if (customer != null && (!uiState.isDelivered || uiState.showCustomerRating)) {
+                if (customer != null &&
+                    (uiState.isRoutePreview || !uiState.isDelivered || uiState.showCustomerRating)
+                ) {
                     CarWashDeliveryBottomPanel(
                         modifier = Modifier.fillMaxWidth(),
                         deliveryAddress = uiState.deliveryAddress,
@@ -431,6 +464,7 @@ fun CarWashDeliveryMapScreen(
                         isMarkingDelivered = uiState.isMarkingDelivered,
                         isPickupTrip = uiState.isPickupTrip,
                         isReturnToShopTrip = uiState.isReturnToShopTrip,
+                        isRoutePreview = uiState.isRoutePreview,
                         isConfirmingPickup = uiState.isConfirmingPickup,
                         isStartingWash = uiState.isStartingWash,
                         showCustomerRating = uiState.showCustomerRating,
@@ -594,6 +628,7 @@ private fun CarWashDeliveryBottomPanel(
     isMarkingDelivered: Boolean,
     isPickupTrip: Boolean,
     isReturnToShopTrip: Boolean,
+    isRoutePreview: Boolean,
     isConfirmingPickup: Boolean,
     isStartingWash: Boolean,
     showCustomerRating: Boolean,
@@ -739,6 +774,7 @@ private fun CarWashDeliveryBottomPanel(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = when {
+                                isRoutePreview -> "Dirección del cliente"
                                 isReturnToShopTrip -> "Dirección del autolavado"
                                 isPickupTrip -> "Dirección del cliente"
                                 else -> "Dirección de entrega"
@@ -769,7 +805,14 @@ private fun CarWashDeliveryBottomPanel(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (isReturnToShopTrip) {
+                if (isRoutePreview) {
+                    Text(
+                        text = "Estimación del tiempo para ir a recoger el carro. La ruta usa tu ubicación actual si está disponible.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DobbyShopColors.TextSecondary,
+                        lineHeight = 18.sp,
+                    )
+                } else if (isReturnToShopTrip) {
                     val canStartService = isNearCustomer && !isStartingWash && !isMarkingArrived
                     Button(
                         onClick = onStartServiceAtShop,

@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -190,6 +191,7 @@ fun OrderDetailScreen(
     onOnDeliverySuccess: () -> Unit,
     onOpenDeliveryMap: () -> Unit,
     onOpenPickupMap: () -> Unit = onOpenDeliveryMap,
+    onOpenCustomerRoutePreview: () -> Unit = onOpenDeliveryMap,
     viewModel: OrderDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -299,7 +301,17 @@ fun OrderDetailScreen(
                                 .padding(bottom = if (hasBottomActions) 8.dp else 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            OrderInfoCard(order = order, isCarWash = uiState.isCarWash)
+                            OrderInfoCard(
+                                order = order,
+                                isCarWash = uiState.isCarWash,
+                                onOpenCustomerRoute = if (
+                                    uiState.isCarWash && order.lat != null && order.lng != null
+                                ) {
+                                    onOpenCustomerRoutePreview
+                                } else {
+                                    null
+                                },
+                            )
                             ProductsSection(items = order.items)
                             OrderTotalCard(total = order.productsSubtotal())
                             if (order.status in setOf("ASSIGNED", "ON_DELIVERY", "DELIVERED")) {
@@ -390,10 +402,12 @@ fun OrderDetailScreen(
                         }
 
                         if (order.status == "CONFIRMED") {
-                            LaunchedEffect(order.id) {
-                                showPrepInstructionNotice = true
-                                delay(6_000)
-                                showPrepInstructionNotice = false
+                            if (!uiState.isCarWash) {
+                                LaunchedEffect(order.id) {
+                                    showPrepInstructionNotice = true
+                                    delay(6_000)
+                                    showPrepInstructionNotice = false
+                                }
                             }
                             if (showPrepTimePicker) {
                                 EstimatedPrepTimePickerDialog(
@@ -406,14 +420,16 @@ fun OrderDetailScreen(
                                     },
                                 )
                             }
-                            AnimatedVisibility(
-                                visible = showPrepInstructionNotice,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
-                            ) {
-                                PrepInstructionNotice(
-                                    onDismiss = { showPrepInstructionNotice = false },
-                                )
+                            if (!uiState.isCarWash) {
+                                AnimatedVisibility(
+                                    visible = showPrepInstructionNotice,
+                                    enter = fadeIn() + expandVertically(),
+                                    exit = fadeOut() + shrinkVertically(),
+                                ) {
+                                    PrepInstructionNotice(
+                                        onDismiss = { showPrepInstructionNotice = false },
+                                    )
+                                }
                             }
                             OutlinedButton(
                                 onClick = { showPrepTimePicker = true },
@@ -659,7 +675,11 @@ private fun OrderDetailTopBar(onBack: () -> Unit) {
 }
 
 @Composable
-private fun OrderInfoCard(order: ShopOrderDto, isCarWash: Boolean) {
+private fun OrderInfoCard(
+    order: ShopOrderDto,
+    isCarWash: Boolean,
+    onOpenCustomerRoute: (() -> Unit)? = null,
+) {
     val visual = detailStatusVisual(order.status, isCarWash)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -738,15 +758,24 @@ private fun OrderInfoCard(order: ShopOrderDto, isCarWash: Boolean) {
                     modifier = Modifier.padding(vertical = 14.dp),
                     color = DobbyShopColors.Border,
                 )
+                val routeClickable = onOpenCustomerRoute != null
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (routeClickable) {
+                                Modifier.clickable(onClick = onOpenCustomerRoute!!)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     DetailIconBox(icon = Icons.Default.LocationOn)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Dirección de entrega",
+                            text = if (isCarWash) "Dirección del cliente" else "Dirección de entrega",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = DobbyShopColors.TextPrimary,
@@ -756,6 +785,23 @@ private fun OrderInfoCard(order: ShopOrderDto, isCarWash: Boolean) {
                             text = addr,
                             style = MaterialTheme.typography.bodyMedium,
                             color = DobbyShopColors.TextSecondary,
+                        )
+                        if (routeClickable) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Ver ruta y tiempo estimado",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = DobbyShopColors.Purple,
+                            )
+                        }
+                    }
+                    if (routeClickable) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Ver ruta",
+                            tint = DobbyShopColors.Purple,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }

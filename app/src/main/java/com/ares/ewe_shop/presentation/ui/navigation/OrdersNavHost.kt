@@ -146,6 +146,7 @@ fun OrdersNavHost(
                 onOnDeliverySuccess = openCarWashDeliveryMap,
                 onOpenDeliveryMap = openCarWashDeliveryMap,
                 onOpenPickupMap = openCarWashDeliveryMap,
+                onOpenCustomerRoutePreview = openCarWashDeliveryMap,
             )
         }
         composable(

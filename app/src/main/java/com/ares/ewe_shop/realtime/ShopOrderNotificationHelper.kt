@@ -92,7 +92,11 @@ object ShopOrderNotificationHelper {
             "order_status" -> when (status?.uppercase()) {
                 "ON_DELIVERY" -> "Pedido en camino al cliente" to
                     "El repartidor recogió el pedido y va en camino al cliente."
-                "DELIVERED" -> "Pedido entregado" to "El pedido fue entregado."
+                "DELIVERED" -> if (carWash) {
+                    "Servicio entregado" to "El coche ha sido entregado."
+                } else {
+                    "Pedido entregado" to "El pedido fue entregado."
+                }
                 else -> "Actualización de pedido" to "Estado: ${status ?: "—"}"
             }
             else -> "Actualización" to "Hay novedades en tus pedidos."

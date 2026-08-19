@@ -68,6 +68,11 @@ data class CarWashDeliveryMapUiState(
     val isStartingWash: Boolean = false,
     /** API status; used to leave the map when another device advances the order. */
     val orderStatus: String? = null,
+    /**
+     * Vista previa desde el detalle (antes de salir a recoger): ruta + ETA,
+     * sin acciones de llegada/PIN ni publicación de GPS/ETA al cliente.
+     */
+    val isRoutePreview: Boolean = false,
     val showCustomerRating: Boolean = false,
     val customerRatingStars: Int = 0,
     val customerPunctual: Boolean = false,
@@ -97,6 +102,8 @@ class CarWashDeliveryMapViewModel @Inject constructor(
     private var lastPostedEtaMinutes: Int? = null
     private var lastRouteFetchAt: Long = 0L
     private var pendingAfterRating: (() -> Unit)? = null
+    /** Fijado en la primera carga: preview vs viaje activo. */
+    private var sessionIsRoutePreview: Boolean? = null
 
     init {
         loadData()
@@ -135,6 +142,10 @@ class CarWashDeliveryMapViewModel @Inject constructor(
             val shopLatLng = latLngOrNull(order.shopLat, order.shopLng)
             val customerLatLng = latLngOrNull(order.lat, order.lng)
             val previous = _uiState.value
+            val statusIsActiveTrip = order.status in setOf("OUT_FOR_PICKUP", "PICKED_UP", "ON_DELIVERY")
+            if (sessionIsRoutePreview == null) {
+                sessionIsRoutePreview = !statusIsActiveTrip
+            }
             _uiState.value = previous.copy(
                 shopLatLng = shopLatLng,
                 customerLatLng = customerLatLng,
@@ -148,6 +159,7 @@ class CarWashDeliveryMapViewModel @Inject constructor(
                 isDelivered = order.status == "DELIVERED",
                 isPickupTrip = order.status == "OUT_FOR_PICKUP",
                 isReturnToShopTrip = order.status == "PICKED_UP",
+                isRoutePreview = sessionIsRoutePreview == true,
                 orderStatus = order.status,
                 isLoading = false,
                 deliveryCodeInput = if (order.status == "PICKED_UP") "" else previous.deliveryCodeInput,
@@ -199,8 +211,8 @@ class CarWashDeliveryMapViewModel @Inject constructor(
                         currentLocation = latLng,
                         isNearCustomer = near || state.isNearCustomer,
                     )
-                    // Publica GPS para que el cliente vea el vehículo en Dobby.
-                    if (!_uiState.value.isDelivered) {
+                    // Publica GPS para que el cliente vea el vehículo en Dobby (no en preview).
+                    if (!_uiState.value.isDelivered && !_uiState.value.isRoutePreview) {
                         orderRepository.updateCourierLocation(
                             orderId,
                             latLng.latitude,
@@ -279,6 +291,7 @@ class CarWashDeliveryMapViewModel @Inject constructor(
 
     private fun pushEtaMinutes(minutes: Int) {
         if (orderId.isBlank() || lastPostedEtaMinutes == minutes) return
+        if (_uiState.value.isRoutePreview) return
         lastPostedEtaMinutes = minutes
         viewModelScope.launch {
             orderRepository.updateDeliveryEta(orderId, minutes)
