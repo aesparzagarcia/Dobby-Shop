@@ -101,6 +101,7 @@ class TokenRefreshInterceptor @Inject constructor(
         val u = request.url.toString()
         return u.contains("auth/shop/request-otp") ||
             u.contains("auth/shop/verify-otp") ||
-            u.contains("auth/shop/refresh")
+            u.contains("auth/shop/refresh") ||
+            u.contains("auth/shop/logout")
     }
 }

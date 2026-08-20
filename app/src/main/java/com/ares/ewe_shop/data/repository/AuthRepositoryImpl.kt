@@ -6,6 +6,7 @@ import com.ares.ewe_shop.data.remote.ShopLaunchRefreshOutcome
 import com.ares.ewe_shop.data.remote.ShopTokenRefreshService
 import com.ares.ewe_shop.data.remote.api.DobbyShopApi
 import com.ares.ewe_shop.data.remote.model.ErrorResponse
+import com.ares.ewe_shop.data.remote.model.ShopRefreshRequest
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpRequest
 import com.ares.ewe_shop.data.remote.model.VerifyOtpRequest
 import com.ares.ewe_shop.domain.model.AuthResult
@@ -75,6 +76,14 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        try {
+            val refresh = sessionManager.refreshToken.first()?.trim().orEmpty()
+            if (refresh.isNotEmpty()) {
+                api.logoutSession(ShopRefreshRequest(refresh))
+            }
+        } catch (_: Exception) {
+            // Best-effort server revoke; always clear local session.
+        }
         shopRealtimeCoordinator.onLogout()
         sessionManager.clearSession()
     }

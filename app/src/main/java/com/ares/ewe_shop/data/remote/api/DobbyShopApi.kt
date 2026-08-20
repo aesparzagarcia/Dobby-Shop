@@ -14,6 +14,7 @@ import com.ares.ewe_shop.data.remote.model.VerifyDeliveryCodeRequest
 import com.ares.ewe_shop.data.remote.model.VerifyDeliveryCodeResponse
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpRequest
 import com.ares.ewe_shop.data.remote.model.ShopRequestOtpResponse
+import com.ares.ewe_shop.data.remote.model.ShopRefreshRequest
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.CreateShopProductRequest
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
@@ -41,6 +42,10 @@ interface DobbyShopApi {
     /** Shop login: verify OTP and get token for the Shop (not the generic auth/verify-otp). */
     @POST("auth/shop/verify-otp")
     suspend fun verifyOtpShop(@Body body: VerifyOtpRequest): VerifyOtpResponse
+
+    /** Server-side revoke of refresh_sessions (best-effort before local clear). */
+    @POST("auth/shop/logout")
+    suspend fun logoutSession(@Body body: ShopRefreshRequest)
 
     @POST("shop/push-device")
     suspend fun registerPushDevice(@Body body: RegisterPushDeviceRequest)
