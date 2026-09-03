@@ -13,8 +13,27 @@ data class ShopProductDto(
     @SerializedName("rate") val rate: Float = 0f,
     @SerializedName("isActive") val isActive: Boolean = true,
     @SerializedName("category") val category: String = "miscelaneos",
-    @SerializedName("shop") val shop: ShopNameRef? = null
-)
+    @SerializedName("shop") val shop: ShopNameRef? = null,
+    @SerializedName("moderationStatus") val moderationStatus: String? = null,
+    @SerializedName("canActivate") val canActivate: Boolean = true,
+) {
+    val isPendingModeration: Boolean
+        get() {
+            val status = moderationStatus?.uppercase()
+            return status == "PENDING" || status == "REVIEWED"
+        }
+
+    val wasRejected: Boolean
+        get() = moderationStatus?.uppercase() == "DISMISSED"
+
+    val availabilityBadge: String?
+        get() = when {
+            isPendingModeration -> "En revisión"
+            wasRejected -> "Rechazado"
+            !isActive -> "Pausado"
+            else -> null
+        }
+}
 
 data class ShopNameRef(
     @SerializedName("name") val name: String?

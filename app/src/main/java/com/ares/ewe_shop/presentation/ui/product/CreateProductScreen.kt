@@ -154,7 +154,7 @@ fun CreateProductScreen(
             CreateProductSubmitBar(
                 label = submitLabel,
                 isSubmitting = uiState.isSubmitting,
-                enabled = !uiState.isSubmitting && !uiState.isUploadingImage,
+                enabled = uiState.canSubmit,
                 onClick = { viewModel.submit() },
             )
         },
@@ -233,11 +233,25 @@ fun CreateProductScreen(
                 }
             }
             item {
-                CreateToggleRow(
-                    label = "Producto activo (visible en la app)",
-                    checked = uiState.isActive,
-                    onCheckedChange = viewModel::onIsActiveChange,
-                )
+                val canToggleActive = isEditing && uiState.canActivate
+                if (canToggleActive) {
+                    CreateToggleRow(
+                        label = "Producto activo (visible en la app)",
+                        checked = uiState.isActive,
+                        onCheckedChange = viewModel::onIsActiveChange,
+                    )
+                } else {
+                    Text(
+                        text = when {
+                            !isEditing -> "El producto quedará inactivo hasta que Dobbi lo revise y apruebe."
+                            uiState.moderationStatus.equals("DISMISSED", ignoreCase = true) ->
+                                "Este producto fue rechazado y no se publicará."
+                            else -> "Este producto se publicará cuando Dobbi lo apruebe."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DobbyShopColors.TextSecondary,
+                    )
+                }
             }
             item {
                 CreatePhotoSection(
@@ -414,7 +428,7 @@ private fun CreateDescriptionField(
     maxLength: Int,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        CreateFieldLabel(label = "Descripción (opcional)", required = false)
+        CreateFieldLabel(label = "Descripción", required = true)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -577,12 +591,7 @@ private fun CreatePhotoSection(
     onRemovePhoto: (Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = "Fotos del producto",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = DobbyShopColors.TextPrimary,
-        )
+        CreateFieldLabel(label = "Fotos del producto", required = true)
 
         if (imageUrls.isNotEmpty()) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -40,14 +40,28 @@ data class CreateProductUiState(
     val priceText: String = "",
     val hasPromotion: Boolean = false,
     val discountText: String = "0",
-    val isActive: Boolean = true,
-    val category: String = ShopProductCategory.DEFAULT,
+    val isActive: Boolean = false,
+    val canActivate: Boolean = false,
+    val moderationStatus: String? = null,
+    val category: String = "",
     val imageUrls: List<String> = emptyList(),
     val isSubmitting: Boolean = false,
     val isUploadingImage: Boolean = false,
     val errorMessage: String? = null,
-    val successMessage: String? = null
-)
+    val successMessage: String? = null,
+) {
+    val canSubmit: Boolean
+        get() {
+            val nameOk = name.trim().isNotEmpty()
+            val descriptionOk = description.trim().isNotEmpty()
+            val price = priceText.replace(",", ".").trim().toDoubleOrNull()
+            val priceOk = price != null && price >= 0.0
+            val categoryOk = ShopProductCategory.isValid(category)
+            val imageOk = imageUrls.any { it.isNotBlank() }
+            return nameOk && descriptionOk && priceOk && categoryOk && imageOk
+                && !isSubmitting && !isUploadingImage
+        }
+}
 
 @HiltViewModel
 class CreateProductViewModel @Inject constructor(
@@ -75,8 +89,8 @@ class CreateProductViewModel @Inject constructor(
             priceText = savedStateHandle[KEY_DRAFT_PRICE] ?: "",
             hasPromotion = savedStateHandle[KEY_DRAFT_HAS_PROMO] ?: false,
             discountText = savedStateHandle[KEY_DRAFT_DISCOUNT] ?: "0",
-            isActive = savedStateHandle[KEY_DRAFT_ACTIVE] ?: true,
-            category = savedStateHandle[KEY_DRAFT_CATEGORY] ?: ShopProductCategory.DEFAULT,
+            isActive = savedStateHandle[KEY_DRAFT_ACTIVE] ?: false,
+            category = savedStateHandle[KEY_DRAFT_CATEGORY] ?: "",
             imageUrls = urls,
         )
     }
@@ -107,6 +121,8 @@ class CreateProductViewModel @Inject constructor(
             hasPromotion = product.hasPromotion,
             discountText = product.discount.coerceIn(0, 100).toString(),
             isActive = product.isActive,
+            canActivate = product.canActivate,
+            moderationStatus = product.moderationStatus,
             category = product.category.takeIf { ShopProductCategory.isValid(it) }
                 ?: ShopProductCategory.DEFAULT,
             imageUrls = product.imageUrls,
@@ -206,16 +222,10 @@ class CreateProductViewModel @Inject constructor(
 
     fun submit() {
         val s = _uiState.value
+        if (!s.canSubmit) return
         val name = s.name.trim()
-        if (name.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = "Ingresa el nombre del producto") }
-            return
-        }
-        val price = s.priceText.replace(",", ".").trim().toDoubleOrNull()
-        if (price == null || price < 0) {
-            _uiState.update { it.copy(errorMessage = "Precio inválido") }
-            return
-        }
+        val description = s.description.trim()
+        val price = s.priceText.replace(",", ".").trim().toDoubleOrNull() ?: return
         val discount = s.discountText.toIntOrNull() ?: 0
         if (s.hasPromotion && (discount < 0 || discount > 100)) {
             _uiState.update { it.copy(errorMessage = "El descuento debe estar entre 0 y 100") }
@@ -227,12 +237,12 @@ class CreateProductViewModel @Inject constructor(
         }
         val body = CreateShopProductRequest(
             name = name,
-            description = s.description.trim().ifEmpty { null },
+            description = description,
             price = price,
             imageUrls = s.imageUrls,
             hasPromotion = s.hasPromotion,
             discount = if (s.hasPromotion) discount else 0,
-            isActive = s.isActive,
+            isActive = if (s.editingProductId != null) s.isActive else false,
             category = s.category.trim().lowercase(),
         )
         val editingId = s.editingProductId
@@ -261,7 +271,7 @@ class CreateProductViewModel @Inject constructor(
                         _uiState.update {
                             CreateProductUiState(
                                 shopDisplayName = it.shopDisplayName,
-                                successMessage = "«${created.name}» publicado en tu tienda"
+                                successMessage = "«${created.name}» enviado a revisión"
                             )
                         }
                     }

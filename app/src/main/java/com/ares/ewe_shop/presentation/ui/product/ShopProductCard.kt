@@ -45,6 +45,7 @@ fun ShopProductCard(
     hasPromotion: Boolean,
     discount: Int,
     isActive: Boolean,
+    availabilityBadge: String? = if (isActive) null else "Pausado",
     categoryLabel: String? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
@@ -133,9 +134,9 @@ fun ShopProductCard(
                         )
                     }
                 }
-                if (!isActive) {
+                if (availabilityBadge != null) {
                     Text(
-                        text = "Pausado",
+                        text = availabilityBadge,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(8.dp)

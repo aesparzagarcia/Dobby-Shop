@@ -534,6 +534,7 @@ private fun ProductCardRow(
                     hasPromotion = product.hasPromotion,
                     discount = product.discount,
                     isActive = product.isActive,
+                    availabilityBadge = product.availabilityBadge,
                     categoryLabel = ShopProductCategory.labelFor(product.category),
                     onClick = { onProductClick(product) },
                     onMenuClick = { onProductClick(product) },
