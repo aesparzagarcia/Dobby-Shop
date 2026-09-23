@@ -16,6 +16,7 @@ data class ShopProductDto(
     @SerializedName("shop") val shop: ShopNameRef? = null,
     @SerializedName("moderationStatus") val moderationStatus: String? = null,
     @SerializedName("canActivate") val canActivate: Boolean = true,
+    @SerializedName("quantitySold") val quantitySold: Int = 0,
 ) {
     val isPendingModeration: Boolean
         get() {

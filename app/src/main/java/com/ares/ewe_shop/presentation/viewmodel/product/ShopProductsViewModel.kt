@@ -17,6 +17,7 @@ import javax.inject.Inject
 data class ShopProductsUiState(
     val products: List<ShopProductDto> = emptyList(),
     val selectedCategoryId: String? = null,
+    val showBestSellers: Boolean = false,
     val shopType: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -40,27 +41,45 @@ class ShopProductsViewModel @Inject constructor(
         viewModelScope.launch { resolveShopType() }
     }
 
+    fun onAllSelected() {
+        val state = _uiState.value
+        if (!state.showBestSellers && state.selectedCategoryId == null) return
+        _uiState.value = state.copy(
+            selectedCategoryId = null,
+            showBestSellers = false,
+        )
+    }
+
+    fun onBestSellersSelected() {
+        val state = _uiState.value
+        if (state.showBestSellers && state.selectedCategoryId == null) return
+        _uiState.value = state.copy(
+            selectedCategoryId = null,
+            showBestSellers = true,
+        )
+    }
+
     fun onCategorySelected(categoryId: String?) {
+        if (categoryId == null) {
+            onAllSelected()
+            return
+        }
         if (_uiState.value.isCarWash) return
-        if (_uiState.value.selectedCategoryId == categoryId) return
+        if (_uiState.value.selectedCategoryId == categoryId && !_uiState.value.showBestSellers) return
         _uiState.value = _uiState.value.copy(
             selectedCategoryId = categoryId,
-            isLoading = true,
-            errorMessage = null,
+            showBestSellers = false,
         )
-        loadProducts()
     }
 
     fun loadProducts() {
         viewModelScope.launch {
             resolveShopType()
-            val category = if (_uiState.value.isCarWash) null else _uiState.value.selectedCategoryId
             _uiState.value = _uiState.value.copy(
-                selectedCategoryId = category,
-                isLoading = true,
+                isLoading = _uiState.value.products.isEmpty(),
                 errorMessage = null,
             )
-            productRepository.getShopProducts(category)
+            productRepository.getShopProducts(null)
                 .onSuccess { list ->
                     _uiState.value = _uiState.value.copy(
                         products = list,
@@ -82,12 +101,8 @@ class ShopProductsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             resolveShopType()
-            val category = if (_uiState.value.isCarWash) null else _uiState.value.selectedCategoryId
-            _uiState.value = _uiState.value.copy(
-                selectedCategoryId = category,
-                isRefreshing = true,
-            )
-            productRepository.getShopProducts(category)
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            productRepository.getShopProducts(null)
                 .onSuccess { list ->
                     _uiState.value = _uiState.value.copy(
                         products = list,

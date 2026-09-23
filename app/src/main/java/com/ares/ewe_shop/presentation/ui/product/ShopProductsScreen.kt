@@ -58,6 +58,8 @@ import com.ares.ewe_shop.data.remote.model.ShopProductDto
 import com.ares.ewe_shop.domain.model.ShopProductCategory
 import com.ares.ewe_shop.presentation.viewmodel.product.ShopProductsViewModel
 
+private val BEST_SELLERS_FILTER_ID = "__best_sellers__"
+
 private data class ProductCategoryChip(
     val id: String?,
     val label: String,
@@ -109,27 +111,83 @@ fun ShopProductsScreen(
         containerColor = DobbyShopColors.Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
-        Box(
+        var searchQuery by rememberSaveable { mutableStateOf("") }
+        val selectedCategoryId = uiState.selectedCategoryId
+        val showBestSellers = uiState.showBestSellers
+        val isCarWash = uiState.isCarWash
+        val displayedProducts = remember(
+            uiState.products,
+            searchQuery,
+            selectedCategoryId,
+            showBestSellers,
+            isCarWash,
+        ) {
+            var list = filterProductsBySearch(uiState.products, searchQuery)
+            if (!isCarWash && !showBestSellers && selectedCategoryId != null) {
+                list = list.filter { normalizeProductCategory(it.category) == selectedCategoryId }
+            }
+            if (showBestSellers) {
+                list.sortedByDescending { it.quantitySold }
+            } else {
+                list
+            }
+        }
+        val groupedSections = remember(displayedProducts, selectedCategoryId, isCarWash, showBestSellers) {
+            if (!isCarWash && !showBestSellers && selectedCategoryId == null) {
+                groupProductsByCategory(displayedProducts)
+            } else {
+                emptyList()
+            }
+        }
+        val productRows = remember(groupedSections, displayedProducts, selectedCategoryId, isCarWash, showBestSellers) {
+            if (!isCarWash && !showBestSellers && selectedCategoryId == null) {
+                buildGroupedRows(groupedSections)
+            } else {
+                displayedProducts.chunked(2).map { ProductListRow.ProductPair(it) }
+            }
+        }
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentAlignment = Alignment.TopStart,
         ) {
-            when {
-                uiState.isLoading && uiState.products.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(color = DobbyShopColors.Purple)
+            ProductsHeader(
+                title = if (isCarWash) "Servicios" else "Productos",
+                onNuevoClick = onNuevoClick,
+            )
+            ProductsSearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                placeholder = if (isCarWash) "Buscar servicios..." else "Buscar productos...",
+            )
+            ProductCategoryFilterRow(
+                selectedCategoryId = selectedCategoryId,
+                showBestSellers = showBestSellers,
+                showCategories = !isCarWash,
+                onAllSelected = viewModel::onAllSelected,
+                onBestSellersSelected = viewModel::onBestSellersSelected,
+                onCategorySelected = viewModel::onCategorySelected,
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) {
+                when {
+                    uiState.isLoading && uiState.products.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(color = DobbyShopColors.Purple)
+                        }
                     }
-                }
-                uiState.errorMessage != null && uiState.products.isEmpty() && !uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    uiState.errorMessage != null && uiState.products.isEmpty() && !uiState.isLoading -> {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
                             Text(
                                 text = uiState.errorMessage!!,
                                 color = MaterialTheme.colorScheme.error,
@@ -141,99 +199,52 @@ fun ShopProductsScreen(
                             }
                         }
                     }
-                }
-                else -> {
-                    var searchQuery by rememberSaveable { mutableStateOf("") }
-                    val selectedCategoryId = uiState.selectedCategoryId
-                    val isCarWash = uiState.isCarWash
-                    val searchFilteredProducts = remember(uiState.products, searchQuery) {
-                        filterProductsBySearch(uiState.products, searchQuery)
-                    }
-                    val groupedSections = remember(searchFilteredProducts, selectedCategoryId, isCarWash) {
-                        if (!isCarWash && selectedCategoryId == null) {
-                            groupProductsByCategory(searchFilteredProducts)
-                        } else {
-                            emptyList()
-                        }
-                    }
-                    val productRows = remember(groupedSections, searchFilteredProducts, selectedCategoryId, isCarWash) {
-                        if (!isCarWash && selectedCategoryId == null) {
-                            buildGroupedRows(groupedSections)
-                        } else {
-                            searchFilteredProducts.chunked(2).map { ProductListRow.ProductPair(it) }
-                        }
-                    }
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        ProductsHeader(
-                            title = if (isCarWash) "Servicios" else "Productos",
-                            onNuevoClick = onNuevoClick,
-                        )
-                        ProductsSearchBar(
-                            query = searchQuery,
-                            onQueryChange = { searchQuery = it },
-                            placeholder = if (isCarWash) "Buscar servicios..." else "Buscar productos...",
-                        )
-                        if (!isCarWash) {
-                            ProductCategoryFilterRow(
-                                selectedCategoryId = selectedCategoryId,
-                                onCategorySelected = viewModel::onCategorySelected,
+                    uiState.products.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ProductsEmptyState(
+                                title = if (isCarWash) {
+                                    "Aún no tienes servicios"
+                                } else {
+                                    "Aún no tienes productos"
+                                },
+                                subtitle = "Pulsa «+ Nuevo» para crear el primero",
                             )
                         }
-                        when {
-                            uiState.products.isEmpty() && !uiState.isLoading -> {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    ProductsEmptyState(
-                                        title = if (isCarWash) {
-                                            "Aún no tienes servicios"
-                                        } else {
-                                            "Aún no tienes productos"
-                                        },
-                                        subtitle = "Pulsa «+ Nuevo» para crear el primero",
-                                    )
-                                }
-                            }
-                            searchFilteredProducts.isEmpty() -> {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    ProductsEmptyState(
-                                        title = when {
-                                            searchQuery.isNotBlank() ->
-                                                if (isCarWash) {
-                                                    "Ningún servicio coincide con la búsqueda"
-                                                } else {
-                                                    "Ningún producto coincide con la búsqueda"
-                                                }
-                                            selectedCategoryId != null ->
-                                                "No hay productos en esta categoría"
-                                            else ->
-                                                if (isCarWash) {
-                                                    "Ningún servicio coincide con la búsqueda"
-                                                } else {
-                                                    "Ningún producto coincide con la búsqueda"
-                                                }
-                                        },
-                                    )
-                                }
-                            }
-                            else -> {
-                                ProductsLazyList(
-                                    rows = productRows,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth(),
-                                    onProductClick = onProductClick,
-                                )
-                            }
+                    }
+                    displayedProducts.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                        ProductsEmptyState(
+                            title = when {
+                                searchQuery.isNotBlank() ->
+                                    if (isCarWash) {
+                                        "Ningún servicio coincide con la búsqueda"
+                                    } else {
+                                        "Ningún producto coincide con la búsqueda"
+                                    }
+                                selectedCategoryId != null ->
+                                    "No hay productos en esta categoría"
+                                else ->
+                                    if (isCarWash) {
+                                        "Ningún servicio coincide con la búsqueda"
+                                    } else {
+                                        "Ningún producto coincide con la búsqueda"
+                                    }
+                            },
+                        )
                         }
+                    }
+                    else -> {
+                        ProductsLazyList(
+                            rows = productRows,
+                            modifier = Modifier.fillMaxSize(),
+                            onProductClick = onProductClick,
+                        )
                     }
                 }
             }
@@ -289,15 +300,30 @@ private fun ProductsHeader(
 @Composable
 private fun ProductCategoryFilterRow(
     selectedCategoryId: String?,
+    showBestSellers: Boolean,
+    showCategories: Boolean,
+    onAllSelected: () -> Unit,
+    onBestSellersSelected: () -> Unit,
     onCategorySelected: (String?) -> Unit,
 ) {
+    val chips = buildList {
+        add(ProductCategoryChip(id = null, label = "Todos", emoji = ""))
+        add(ProductCategoryChip(id = BEST_SELLERS_FILTER_ID, label = "Más vendidos", emoji = "🔥"))
+        if (showCategories) {
+            addAll(productCategoryChips.drop(1))
+        }
+    }
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(productCategoryChips, key = { it.label }) { chip ->
-            val selected = selectedCategoryId == chip.id
+        items(chips, key = { it.label }) { chip ->
+            val selected = when (chip.id) {
+                BEST_SELLERS_FILTER_ID -> showBestSellers
+                null -> !showBestSellers && selectedCategoryId == null
+                else -> !showBestSellers && selectedCategoryId == chip.id
+            }
             val shape = RoundedCornerShape(50)
             val background = when {
                 selected -> DobbyShopColors.PurpleLight
@@ -311,7 +337,13 @@ private fun ProductCategoryFilterRow(
                     .clip(shape)
                     .border(1.dp, borderColor, shape)
                     .background(background, shape)
-                    .clickable { onCategorySelected(chip.id) }
+                    .clickable {
+                        when (chip.id) {
+                            BEST_SELLERS_FILTER_ID -> onBestSellersSelected()
+                            null -> onAllSelected()
+                            else -> onCategorySelected(chip.id)
+                        }
+                    }
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
