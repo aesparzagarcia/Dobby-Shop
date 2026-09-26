@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.domain.repository.OrderRepository
+import com.ares.ewe_shop.domain.repository.ShopProfileRepository
 import com.ares.ewe_shop.realtime.OrderRealtimeBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,9 @@ data class OrderStats(
 data class OrdersUiState(
     val shopDisplayName: String? = null,
     val shopType: String? = null,
+    val shopStatus: String = "AVAILABLE",
+    val showStatusDialog: Boolean = false,
+    val isSavingStatus: Boolean = false,
     val orders: List<ShopOrderDto> = emptyList(),
     val orderStats: OrderStats = OrderStats(),
     val selectedStatusFilter: String? = null,
@@ -36,7 +40,11 @@ data class OrdersUiState(
         get() = shopType.equals("CAR_WASH", ignoreCase = true)
 
     val ordersLabel: String
-        get() = if (isCarWash) "Lavado" else "Pedidos"
+        get() = when (shopStatus.trim().uppercase()) {
+            "SLOW", "LENTO" -> "Lento"
+            "HIGH_DEMAND", "ALTA_DEMANDA", "ALTADEMANDA" -> "Alta demanda"
+            else -> "Disponible"
+        }
 }
 
 private fun computeOrderStats(orders: List<ShopOrderDto>): OrderStats = OrderStats(
@@ -51,6 +59,7 @@ class OrdersViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     private val orderRealtimeBus: OrderRealtimeBus,
     private val sessionManager: SessionManager,
+    private val shopProfileRepository: ShopProfileRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrdersUiState())
@@ -67,6 +76,7 @@ class OrdersViewModel @Inject constructor(
                 )
             }
         }
+        loadShopStatus()
         loadOrders()
         viewModelScope.launch {
             orderRealtimeBus.refreshOrders.collect {
@@ -111,6 +121,7 @@ class OrdersViewModel @Inject constructor(
         viewModelScope.launch {
             val filter = _uiState.value.selectedStatusFilter
             _uiState.value = _uiState.value.copy(isRefreshing = true)
+            loadShopStatus()
             val ordersResult = orderRepository.getOrders(filter)
             val statsResult = orderRepository.getOrders(null)
             ordersResult
@@ -136,5 +147,47 @@ class OrdersViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    fun openStatusDialog() {
+        _uiState.update { it.copy(showStatusDialog = true) }
+    }
+
+    fun dismissStatusDialog() {
+        _uiState.update { it.copy(showStatusDialog = false) }
+    }
+
+    fun saveShopStatus(status: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingStatus = true) }
+            shopProfileRepository.updateStatus(status)
+                .onSuccess { saved ->
+                    _uiState.update {
+                        it.copy(
+                            shopStatus = saved,
+                            showStatusDialog = false,
+                            isSavingStatus = false,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            isSavingStatus = false,
+                            errorMessage = e.message ?: "No se pudo actualizar el estado",
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun loadShopStatus() {
+        viewModelScope.launch {
+            shopProfileRepository.getProfile()
+                .onSuccess { profile ->
+                    val status = profile.status?.takeIf { it.isNotBlank() } ?: "AVAILABLE"
+                    _uiState.update { it.copy(shopStatus = status) }
+                }
+        }
     }
 }

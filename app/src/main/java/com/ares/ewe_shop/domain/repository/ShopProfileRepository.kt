@@ -4,4 +4,5 @@ import com.ares.ewe_shop.data.remote.model.ShopProfileDto
 
 interface ShopProfileRepository {
     suspend fun getProfile(): Result<ShopProfileDto>
+    suspend fun updateStatus(status: String): Result<String>
 }

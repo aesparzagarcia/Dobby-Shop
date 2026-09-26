@@ -12,5 +12,6 @@ data class VerifyOtpShop(
     @SerializedName("id") val id: String,
     @SerializedName("name") val name: String,
     @SerializedName("type") val type: String,
-    @SerializedName("phone") val phone: String?
+    @SerializedName("phone") val phone: String?,
+    @SerializedName("status") val status: String? = null,
 )

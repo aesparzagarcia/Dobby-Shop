@@ -53,6 +53,34 @@ fun formatBreakdownDateRange(): String {
     return "${start.format(fmt)} – ${end.format(fmt)}"
 }
 
+/** Fecha de registro + 1 mes calendario → "Membresía vigente hasta 25 oct 2026". */
+fun membershipValidUntilLabel(createdAt: String?): String? {
+    val expiry = membershipExpiryDate(createdAt) ?: return null
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale("es", "MX"))
+    val dateText = expiry.format(fmt).replace(".", "")
+    return "Membresía vigente hasta $dateText"
+}
+
+fun membershipExpiryDate(createdAt: String?): java.time.LocalDate? {
+    val raw = createdAt?.trim().orEmpty()
+    if (raw.isEmpty()) return null
+    val zone = java.time.ZoneId.systemDefault()
+    val registered = try {
+        java.time.Instant.parse(raw).atZone(zone).toLocalDate()
+    } catch (_: Exception) {
+        try {
+            java.time.OffsetDateTime.parse(raw).toInstant().atZone(zone).toLocalDate()
+        } catch (_: Exception) {
+            try {
+                java.time.LocalDate.parse(raw.take(10))
+            } catch (_: Exception) {
+                return null
+            }
+        }
+    }
+    return registered.plusMonths(1)
+}
+
 fun trendDeltaDouble(
     current: Double?,
     previous: Double?,

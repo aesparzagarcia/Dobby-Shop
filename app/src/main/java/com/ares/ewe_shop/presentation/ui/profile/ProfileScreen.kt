@@ -264,6 +264,25 @@ private fun ProfileHeader(profile: ShopProfileDto) {
                 )
             }
         }
+        membershipValidUntilLabel(profile.createdAt)?.let { label ->
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = DobbyShopColors.TextSecondary,
+                )
+                Text(
+                    text = label,
+                    color = DobbyShopColors.TextSecondary,
+                    fontSize = 13.sp,
+                )
+            }
+        }
     }
 }
 

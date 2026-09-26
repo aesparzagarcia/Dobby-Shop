@@ -38,11 +38,14 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -148,8 +151,10 @@ fun OrdersScreen(
             OrdersHeader(
                 shopName = shopLabel,
                 sectionLabel = uiState.ordersLabel,
+                shopStatus = uiState.shopStatus,
                 isRefreshing = uiState.isRefreshing,
                 onRefresh = { viewModel.refresh() },
+                onSectionLabelClick = { viewModel.openStatusDialog() },
             )
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -251,15 +256,31 @@ fun OrdersScreen(
             }
         }
     }
+
+    if (uiState.showStatusDialog) {
+        ShopOpsStatusDialog(
+            selected = uiState.shopStatus,
+            saving = uiState.isSavingStatus,
+            onDismiss = { viewModel.dismissStatusDialog() },
+            onConfirm = { viewModel.saveShopStatus(it) },
+        )
+    }
 }
 
 @Composable
 private fun OrdersHeader(
     shopName: String,
     sectionLabel: String,
+    shopStatus: String,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
+    onSectionLabelClick: () -> Unit,
 ) {
+    val statusColor = when (shopStatus.uppercase()) {
+        "SLOW" -> DobbyShopColors.Orange
+        "HIGH_DEMAND" -> DobbyShopColors.Red
+        else -> DobbyShopColors.Green
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -277,11 +298,23 @@ private fun OrdersHeader(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = sectionLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = DobbyShopColors.TextSecondary,
-            )
+            Row(
+                modifier = Modifier.clickable(onClick = onSectionLabelClick),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = sectionLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = DobbyShopColors.TextSecondary,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(statusColor),
+                )
+            }
         }
         Surface(
             onClick = onRefresh,
@@ -307,6 +340,62 @@ private fun OrdersHeader(
             }
         }
     }
+}
+
+private data class ShopOpsOption(val value: String, val label: String, val color: Color)
+
+@Composable
+private fun ShopOpsStatusDialog(
+    selected: String,
+    saving: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val options = listOf(
+        ShopOpsOption("AVAILABLE", "Disponible", DobbyShopColors.Green),
+        ShopOpsOption("SLOW", "Lento", DobbyShopColors.Orange),
+        ShopOpsOption("HIGH_DEMAND", "Alta demanda", DobbyShopColors.Red),
+    )
+    var pending by remember(selected) { mutableStateOf(selected.ifBlank { "AVAILABLE" }) }
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        title = { Text("Estado de la tienda") },
+        text = {
+            Column {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !saving) { pending = option.value }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = pending.equals(option.value, ignoreCase = true),
+                            onClick = { if (!saving) pending = option.value },
+                            colors = RadioButtonDefaults.colors(selectedColor = option.color),
+                            enabled = !saving,
+                        )
+                        Text(
+                            text = option.label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = DobbyShopColors.TextPrimary,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(pending) }, enabled = !saving) {
+                Text(if (saving) "Guardando…" else "Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !saving) {
+                Text("Cancelar")
+            }
+        },
+    )
 }
 
 @Composable

@@ -3,6 +3,7 @@ package com.ares.ewe_shop.data.repository
 import com.ares.ewe_shop.data.remote.api.DobbyShopApi
 import com.ares.ewe_shop.data.remote.model.ErrorResponse
 import com.ares.ewe_shop.data.remote.model.ShopProfileDto
+import com.ares.ewe_shop.data.remote.model.UpdateShopStatusRequest
 import com.ares.ewe_shop.domain.repository.ShopProfileRepository
 import com.google.gson.Gson
 import retrofit2.HttpException
@@ -17,6 +18,17 @@ class ShopProfileRepositoryImpl @Inject constructor(
             Result.success(api.getShopProfile())
         } catch (e: HttpException) {
             val message = parseErrorBody(e) ?: "Error al cargar el perfil"
+            Result.failure(Exception(message))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateStatus(status: String): Result<String> {
+        return try {
+            Result.success(api.updateShopStatus(UpdateShopStatusRequest(status)).status)
+        } catch (e: HttpException) {
+            val message = parseErrorBody(e) ?: "No se pudo actualizar el estado"
             Result.failure(Exception(message))
         } catch (e: Exception) {
             Result.failure(e)

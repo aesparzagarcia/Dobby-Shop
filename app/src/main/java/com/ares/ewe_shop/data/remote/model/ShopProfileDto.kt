@@ -6,6 +6,8 @@ data class ShopProfileDto(
     @SerializedName("name") val name: String,
     @SerializedName("logo_url") val logoUrl: String? = null,
     @SerializedName("type") val type: String? = null,
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
     @SerializedName("restaurant_score") val restaurantScore: Int,
     @SerializedName("level_key") val levelKey: String,
     @SerializedName("progress_to_next_level") val progressToNextLevel: Double,
@@ -58,4 +60,12 @@ data class ShopMissionDto(
     @SerializedName("progress") val progress: Int,
     @SerializedName("goal") val goal: Int,
     @SerializedName("completed") val completed: Boolean,
+)
+
+data class UpdateShopStatusRequest(
+    @SerializedName("status") val status: String,
+)
+
+data class ShopStatusResponse(
+    @SerializedName("status") val status: String,
 )

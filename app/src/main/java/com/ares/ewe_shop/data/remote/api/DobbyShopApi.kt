@@ -19,6 +19,8 @@ import com.ares.ewe_shop.data.remote.model.ShopOrderDto
 import com.ares.ewe_shop.data.remote.model.CreateShopProductRequest
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
 import com.ares.ewe_shop.data.remote.model.ShopProfileDto
+import com.ares.ewe_shop.data.remote.model.ShopStatusResponse
+import com.ares.ewe_shop.data.remote.model.UpdateShopStatusRequest
 import com.ares.ewe_shop.data.remote.model.UploadImageResponse
 import com.ares.ewe_shop.data.remote.model.VerifyOtpRequest
 import com.ares.ewe_shop.data.remote.model.VerifyOtpResponse
@@ -58,6 +60,9 @@ interface DobbyShopApi {
 
     @GET("shop/profile")
     suspend fun getShopProfile(): ShopProfileDto
+
+    @PATCH("shop/status")
+    suspend fun updateShopStatus(@Body body: UpdateShopStatusRequest): ShopStatusResponse
 
     @GET("shop/orders")
     suspend fun getOrders(@Query("status") status: String? = null): List<ShopOrderDto>
