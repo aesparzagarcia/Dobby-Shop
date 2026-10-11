@@ -45,6 +45,7 @@ fun ShopProductCard(
     hasPromotion: Boolean,
     discount: Int,
     isActive: Boolean,
+    showFromPrice: Boolean = false,
     availabilityBadge: String? = if (isActive) null else "Pausado",
     categoryLabel: String? = null,
     modifier: Modifier = Modifier,
@@ -83,7 +84,7 @@ fun ShopProductCard(
                         model = absoluteUploadUrl(imageUrl),
                         contentDescription = name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Crop,
                         alignment = Alignment.Center,
                     )
                 } else {
@@ -151,7 +152,11 @@ fun ShopProductCard(
             }
 
             Text(
-                text = "$${String.format("%.2f", discountedPrice)}",
+                text = if (showFromPrice) {
+                    "Desde $${String.format("%.2f", discountedPrice)}"
+                } else {
+                    "$${String.format("%.2f", discountedPrice)}"
+                },
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = DobbyShopColors.TextPrimary,

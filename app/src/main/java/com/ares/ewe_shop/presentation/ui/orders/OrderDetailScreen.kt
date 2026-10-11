@@ -883,6 +883,13 @@ private fun ProductLineCard(item: ShopOrderItemDto) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                item.variantName?.takeIf { it.isNotBlank() }?.let { variant ->
+                    Text(
+                        text = variant,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DobbyShopColors.TextSecondary,
+                    )
+                }
                 Text(
                     text = buildString {
                         append("Cantidad: ${item.quantity}")

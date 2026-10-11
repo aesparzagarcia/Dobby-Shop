@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
+import com.ares.ewe_shop.domain.model.ShopProductCategory
 import com.ares.ewe_shop.domain.repository.ProductRepository
 import com.ares.ewe_shop.domain.repository.ShopProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -123,14 +124,24 @@ class ShopProductsViewModel @Inject constructor(
     private suspend fun resolveShopType() {
         val cached = sessionManager.shopType.first()
         if (!cached.isNullOrBlank()) {
-            _uiState.value = _uiState.value.copy(shopType = cached)
+            applyShopType(cached)
             return
         }
         profileRepository.getProfile()
             .onSuccess { profile ->
                 val type = profile.type?.takeIf { it.isNotBlank() } ?: return@onSuccess
                 sessionManager.updateShopType(type)
-                _uiState.value = _uiState.value.copy(shopType = type)
+                applyShopType(type)
             }
+    }
+
+    private fun applyShopType(type: String) {
+        val selected = _uiState.value.selectedCategoryId
+        val keepSelected = selected != null &&
+            ShopProductCategory.isValidForShopType(selected, type)
+        _uiState.value = _uiState.value.copy(
+            shopType = type,
+            selectedCategoryId = if (keepSelected) selected else null,
+        )
     }
 }

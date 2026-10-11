@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.outlined.AttachMoney
@@ -44,6 +46,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -76,6 +80,9 @@ import com.ares.ewe_shop.core.util.absoluteUploadUrl
 import com.ares.ewe_shop.data.remote.model.ShopProductDto
 import com.ares.ewe_shop.domain.model.ShopProductCategory
 import com.ares.ewe_shop.presentation.viewmodel.product.CreateProductViewModel
+import com.ares.ewe_shop.presentation.viewmodel.product.ProductVariantRow
+import com.ares.ewe_shop.presentation.viewmodel.product.SALE_TYPE_UNIQUE
+import com.ares.ewe_shop.presentation.viewmodel.product.SALE_TYPE_VARIANTS
 
 private const val MAX_PHOTOS = 5
 private const val MAX_DESCRIPTION_LENGTH = 200
@@ -86,6 +93,7 @@ private fun categoryEmoji(slug: String): String = when (slug) {
     ShopProductCategory.POSTRES -> "🍨"
     ShopProductCategory.COMIDAS -> "🍽️"
     ShopProductCategory.SNACKS -> "🍿"
+    ShopProductCategory.MEDICAMENTOS -> "💊"
     else -> "📦"
 }
 
@@ -178,16 +186,30 @@ fun CreateProductScreen(
                 )
             }
             item {
-                CreateFormField(
-                    label = "Precio",
-                    required = true,
-                    value = uiState.priceText,
-                    onValueChange = viewModel::onPriceChange,
-                    placeholder = "Ej. 8.50",
-                    leadingIcon = Icons.Outlined.AttachMoney,
-                    singleLine = true,
-                    keyboardType = KeyboardType.Decimal,
-                )
+                if (uiState.isRestaurant) {
+                    CreatePriceAndPresentationsSection(
+                        saleType = uiState.saleType,
+                        priceText = uiState.priceText,
+                        variantRows = uiState.variantRows,
+                        onSaleTypeChange = viewModel::onSaleTypeChange,
+                        onPriceChange = viewModel::onPriceChange,
+                        onVariantNameChange = viewModel::onVariantNameChange,
+                        onVariantPriceChange = viewModel::onVariantPriceChange,
+                        onAddVariant = viewModel::addVariantRow,
+                        onRemoveVariant = viewModel::removeVariantRow,
+                    )
+                } else {
+                    CreateFormField(
+                        label = "Precio",
+                        required = true,
+                        value = uiState.priceText,
+                        onValueChange = viewModel::onPriceChange,
+                        placeholder = "Ej. 8.50",
+                        leadingIcon = Icons.Outlined.AttachMoney,
+                        singleLine = true,
+                        keyboardType = KeyboardType.Decimal,
+                    )
+                }
             }
             item {
                 CreateDescriptionField(
@@ -199,6 +221,7 @@ fun CreateProductScreen(
             item {
                 CreateCategorySelector(
                     selectedCategory = uiState.category,
+                    shopType = uiState.shopType,
                     onCategorySelected = viewModel::onCategoryChange,
                 )
             }
@@ -349,6 +372,179 @@ private fun CreateProductSubmitBar(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CreatePriceAndPresentationsSection(
+    saleType: String,
+    priceText: String,
+    variantRows: List<ProductVariantRow>,
+    onSaleTypeChange: (String) -> Unit,
+    onPriceChange: (String) -> Unit,
+    onVariantNameChange: (Int, String) -> Unit,
+    onVariantPriceChange: (Int, String) -> Unit,
+    onAddVariant: () -> Unit,
+    onRemoveVariant: (Int) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        CreateFieldLabel(label = "Precio y presentaciones", required = true)
+        Text(
+            text = "Elige si el producto tiene un solo precio o varias presentaciones.",
+            style = MaterialTheme.typography.bodySmall,
+            color = DobbyShopColors.TextSecondary,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { onSaleTypeChange(SALE_TYPE_UNIQUE) }
+                    .padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = saleType == SALE_TYPE_UNIQUE,
+                    onClick = { onSaleTypeChange(SALE_TYPE_UNIQUE) },
+                    colors = RadioButtonDefaults.colors(selectedColor = DobbyShopColors.Purple),
+                )
+                Text(
+                    text = "Precio único",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = DobbyShopColors.TextPrimary,
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { onSaleTypeChange(SALE_TYPE_VARIANTS) }
+                    .padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = saleType == SALE_TYPE_VARIANTS,
+                    onClick = { onSaleTypeChange(SALE_TYPE_VARIANTS) },
+                    colors = RadioButtonDefaults.colors(selectedColor = DobbyShopColors.Purple),
+                )
+                Text(
+                    text = "Variantes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = DobbyShopColors.TextPrimary,
+                )
+            }
+        }
+        if (saleType == SALE_TYPE_UNIQUE) {
+            CreateFormField(
+                label = "Precio",
+                required = true,
+                value = priceText,
+                onValueChange = onPriceChange,
+                placeholder = "Ej. 8.50",
+                leadingIcon = Icons.Outlined.AttachMoney,
+                singleLine = true,
+                keyboardType = KeyboardType.Decimal,
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Presentaciones",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DobbyShopColors.TextSecondary,
+                )
+                variantRows.forEachIndexed { index, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CompactTextField(
+                            value = row.name,
+                            onValueChange = { onVariantNameChange(index, it) },
+                            placeholder = "Ej. 6 piezas",
+                            modifier = Modifier.weight(1f),
+                            keyboardType = KeyboardType.Text,
+                        )
+                        CompactTextField(
+                            value = row.priceText,
+                            onValueChange = { onVariantPriceChange(index, it) },
+                            placeholder = "0.00",
+                            modifier = Modifier.width(96.dp),
+                            keyboardType = KeyboardType.Decimal,
+                        )
+                        IconButton(
+                            onClick = { onRemoveVariant(index) },
+                            enabled = variantRows.size > 1,
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Quitar",
+                                tint = if (variantRows.size > 1) Color(0xFFDC2626) else DobbyShopColors.TextSecondary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = "+ Agregar presentación",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = DobbyShopColors.Purple,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onAddVariant)
+                        .padding(vertical = 4.dp, horizontal = 2.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(DobbyShopColors.Surface)
+            .border(1.dp, DobbyShopColors.Border, RoundedCornerShape(14.dp))
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = DobbyShopColors.TextPrimary,
+                fontWeight = FontWeight.Medium,
+            ),
+            cursorBrush = SolidColor(DobbyShopColors.Purple),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            decorationBox = { inner ->
+                Box {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = DobbyShopColors.TextSecondary,
+                        )
+                    }
+                    inner()
+                }
+            },
+        )
     }
 }
 
@@ -512,15 +708,17 @@ private fun CreateFieldLabel(label: String, required: Boolean) {
 @Composable
 private fun CreateCategorySelector(
     selectedCategory: String,
+    shopType: String?,
     onCategorySelected: (String) -> Unit,
 ) {
+    val categories = ShopProductCategory.availableForShopType(shopType)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         CreateFieldLabel(label = "Categoría", required = true)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(end = 4.dp),
         ) {
-            items(ShopProductCategory.all, key = { it.first }) { (slug, label) ->
+            items(categories, key = { it.first }) { (slug, label) ->
                 val selected = selectedCategory == slug
                 val shape = RoundedCornerShape(50)
                 val background = if (selected) DobbyShopColors.PurpleLight else DobbyShopColors.Surface

@@ -66,18 +66,21 @@ private data class ProductCategoryChip(
     val emoji: String,
 )
 
-private val productCategoryChips = listOf(ProductCategoryChip(null, "Todos", "")) +
-    ShopProductCategory.all.map { (slug, label) ->
-        val emoji = when (slug) {
-            ShopProductCategory.BEBIDAS -> "🥤"
-            ShopProductCategory.ALCOHOL -> "🍾"
-            ShopProductCategory.POSTRES -> "🍨"
-            ShopProductCategory.COMIDAS -> "🍽️"
-            ShopProductCategory.SNACKS -> "🍿"
-            else -> "📦"
+private fun categoryEmoji(slug: String): String = when (slug) {
+    ShopProductCategory.BEBIDAS -> "🥤"
+    ShopProductCategory.ALCOHOL -> "🍾"
+    ShopProductCategory.POSTRES -> "🍨"
+    ShopProductCategory.COMIDAS -> "🍽️"
+    ShopProductCategory.SNACKS -> "🍿"
+    ShopProductCategory.MEDICAMENTOS -> "💊"
+    else -> "📦"
+}
+
+private fun productCategoryChipsFor(shopType: String?): List<ProductCategoryChip> =
+    listOf(ProductCategoryChip(null, "Todos", "")) +
+        ShopProductCategory.availableForShopType(shopType).map { (slug, label) ->
+            ProductCategoryChip(slug, label, categoryEmoji(slug))
         }
-        ProductCategoryChip(slug, label, emoji)
-    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,6 +168,7 @@ fun ShopProductsScreen(
                 selectedCategoryId = selectedCategoryId,
                 showBestSellers = showBestSellers,
                 showCategories = !isCarWash,
+                shopType = uiState.shopType,
                 onAllSelected = viewModel::onAllSelected,
                 onBestSellersSelected = viewModel::onBestSellersSelected,
                 onCategorySelected = viewModel::onCategorySelected,
@@ -302,6 +306,7 @@ private fun ProductCategoryFilterRow(
     selectedCategoryId: String?,
     showBestSellers: Boolean,
     showCategories: Boolean,
+    shopType: String?,
     onAllSelected: () -> Unit,
     onBestSellersSelected: () -> Unit,
     onCategorySelected: (String?) -> Unit,
@@ -310,7 +315,7 @@ private fun ProductCategoryFilterRow(
         add(ProductCategoryChip(id = null, label = "Todos", emoji = ""))
         add(ProductCategoryChip(id = BEST_SELLERS_FILTER_ID, label = "Más vendidos", emoji = "🔥"))
         if (showCategories) {
-            addAll(productCategoryChips.drop(1))
+            addAll(productCategoryChipsFor(shopType).drop(1))
         }
     }
     LazyRow(
@@ -561,7 +566,8 @@ private fun ProductCardRow(
                 ShopProductCard(
                     name = product.name,
                     imageUrl = product.imageUrls.firstOrNull { it.isNotBlank() },
-                    price = product.price,
+                    price = product.listPrice,
+                    showFromPrice = product.hasMultipleVariants,
                     rate = product.rate,
                     hasPromotion = product.hasPromotion,
                     discount = product.discount,
