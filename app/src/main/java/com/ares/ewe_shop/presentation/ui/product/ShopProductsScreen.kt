@@ -73,6 +73,7 @@ private fun categoryEmoji(slug: String): String = when (slug) {
     ShopProductCategory.COMIDAS -> "🍽️"
     ShopProductCategory.SNACKS -> "🍿"
     ShopProductCategory.MEDICAMENTOS -> "💊"
+    ShopProductCategory.AUTOLAVADO -> "🚗"
     else -> "📦"
 }
 

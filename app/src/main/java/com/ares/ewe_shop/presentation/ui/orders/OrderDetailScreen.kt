@@ -83,7 +83,10 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
+import com.ares.ewe_shop.R
+import com.ares.ewe_shop.presentation.ui.components.ProductImagePlaceholder
 import com.ares.ewe_shop.core.theme.DobbyShopColors
 import com.ares.ewe_shop.presentation.ui.main.LocalMainBottomBarPadding
 import com.ares.ewe_shop.core.util.OrderDateFormat
@@ -858,19 +861,17 @@ private fun ProductLineCard(item: ShopOrderItemDto) {
             ) {
                 val imageUrl = item.imageUrl?.takeIf { it.isNotBlank() }
                 if (imageUrl != null) {
+                    val placeholder = painterResource(R.drawable.img_product_placeholder)
                     AsyncImage(
                         model = absoluteUploadUrl(imageUrl),
                         contentDescription = name,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
+                        placeholder = placeholder,
+                        error = placeholder,
                     )
                 } else {
-                    Text(
-                        text = name.take(1).uppercase(Locale.getDefault()),
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DobbyShopColors.Purple,
-                    )
+                    ProductImagePlaceholder(contentDescription = name)
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))

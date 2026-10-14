@@ -9,6 +9,7 @@ object ShopProductCategory {
     const val SNACKS = "snacks"
     const val MISCELANEOS = "miscelaneos"
     const val MEDICAMENTOS = "medicamentos"
+    const val AUTOLAVADO = "autolavado"
 
     val DEFAULT = MISCELANEOS
 
@@ -20,18 +21,20 @@ object ShopProductCategory {
         SNACKS to "Snacks",
         MISCELANEOS to "Misceláneos",
         MEDICAMENTOS to "Medicamentos",
+        AUTOLAVADO to "Autolavado",
     )
 
     private val restaurantOnly = setOf(POSTRES, COMIDAS)
     private val shopOnly = setOf(MEDICAMENTOS)
 
-    /** Categorías seleccionables según tipo (`SHOP` vs `RESTAURANT`). */
+    /** Categorías seleccionables según tipo (`SHOP` / `RESTAURANT` / `CAR_WASH`). */
     fun availableForShopType(shopType: String?): List<Pair<String, String>> {
         val t = shopType?.trim()?.uppercase().orEmpty()
-        if (t == "CAR_WASH") return emptyList()
+        if (t == "CAR_WASH") return listOf(AUTOLAVADO to "Autolavado")
         val isShop = t == "SHOP"
         return all.filter { (slug, _) ->
             when {
+                slug == AUTOLAVADO -> false
                 slug in restaurantOnly -> !isShop
                 slug in shopOnly -> isShop
                 else -> true
@@ -49,4 +52,11 @@ object ShopProductCategory {
         val normalized = slug?.trim()?.lowercase() ?: return false
         return availableForShopType(shopType).any { it.first == normalized }
     }
+
+    fun defaultForShopType(shopType: String?): String =
+        if (shopType?.trim()?.equals("CAR_WASH", ignoreCase = true) == true) {
+            AUTOLAVADO
+        } else {
+            ""
+        }
 }

@@ -94,6 +94,7 @@ private fun categoryEmoji(slug: String): String = when (slug) {
     ShopProductCategory.COMIDAS -> "🍽️"
     ShopProductCategory.SNACKS -> "🍿"
     ShopProductCategory.MEDICAMENTOS -> "💊"
+    ShopProductCategory.AUTOLAVADO -> "🚗"
     else -> "📦"
 }
 
@@ -180,7 +181,11 @@ fun CreateProductScreen(
                     required = true,
                     value = uiState.name,
                     onValueChange = viewModel::onNameChange,
-                    placeholder = "Ej. Hamburguesa clásica",
+                    placeholder = if (uiState.isCarWash) {
+                        "Ej. Lavado y encerado"
+                    } else {
+                        "Ej. Hamburguesa clásica"
+                    },
                     leadingIcon = Icons.Default.LocalOffer,
                     singleLine = true,
                 )

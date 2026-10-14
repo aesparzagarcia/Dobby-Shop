@@ -69,6 +69,9 @@ data class CreateProductUiState(
     val isRestaurant: Boolean
         get() = shopType.equals("RESTAURANT", ignoreCase = true)
 
+    val isCarWash: Boolean
+        get() = shopType.equals("CAR_WASH", ignoreCase = true)
+
     val parsedVariantRows: List<Pair<String, Double>>
         get() {
             val rows = mutableListOf<Pair<String, Double>>()
@@ -122,7 +125,7 @@ class CreateProductViewModel @Inject constructor(
                     shopDisplayName = name,
                     shopType = type,
                     category = it.category.takeIf { c -> ShopProductCategory.isValidForShopType(c, type) }
-                        ?: "",
+                        ?: ShopProductCategory.defaultForShopType(type),
                 )
             }
         }
@@ -163,7 +166,7 @@ class CreateProductViewModel @Inject constructor(
             shopType = shopType,
             editingProductId = null,
             category = draft.category.takeIf { ShopProductCategory.isValidForShopType(it, shopType) }
-                ?: "",
+                ?: ShopProductCategory.defaultForShopType(shopType),
             errorMessage = null,
             successMessage = null,
             isSubmitting = false,
@@ -199,7 +202,7 @@ class CreateProductViewModel @Inject constructor(
             canActivate = product.canActivate,
             moderationStatus = product.moderationStatus,
             category = product.category.takeIf { ShopProductCategory.isValidForShopType(it, shopType) }
-                ?: "",
+                ?: ShopProductCategory.defaultForShopType(shopType),
             imageUrls = product.imageUrls,
             errorMessage = null,
             successMessage = null,

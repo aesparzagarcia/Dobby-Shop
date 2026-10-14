@@ -27,14 +27,17 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ares.ewe_shop.R
 import com.ares.ewe_shop.core.theme.DobbyShopColors
 import com.ares.ewe_shop.core.util.absoluteUploadUrl
+import com.ares.ewe_shop.presentation.ui.components.ProductImagePlaceholder
 
 @Composable
 fun ShopProductCard(
@@ -80,20 +83,18 @@ fun ShopProductCard(
                 contentAlignment = Alignment.Center,
             ) {
                 if (!imageUrl.isNullOrBlank()) {
+                    val placeholder = painterResource(R.drawable.img_product_placeholder)
                     AsyncImage(
                         model = absoluteUploadUrl(imageUrl),
                         contentDescription = name,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         alignment = Alignment.Center,
+                        placeholder = placeholder,
+                        error = placeholder,
                     )
                 } else {
-                    Text(
-                        text = name.take(1).uppercase(),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DobbyShopColors.Purple.copy(alpha = 0.45f),
-                    )
+                    ProductImagePlaceholder(contentDescription = name)
                 }
                 IconButton(
                     onClick = onMenuClick,
