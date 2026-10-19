@@ -2,10 +2,12 @@ package com.ares.ewe_shop.data.repository
 
 import com.ares.ewe_shop.data.remote.api.DobbyShopApi
 import com.ares.ewe_shop.data.remote.model.ErrorResponse
+import com.ares.ewe_shop.data.remote.model.ShopEarningsDto
 import com.ares.ewe_shop.data.remote.model.ShopProfileDto
 import com.ares.ewe_shop.data.remote.model.UpdateShopStatusRequest
 import com.ares.ewe_shop.domain.repository.ShopProfileRepository
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -16,8 +18,23 @@ class ShopProfileRepositoryImpl @Inject constructor(
     override suspend fun getProfile(): Result<ShopProfileDto> {
         return try {
             Result.success(api.getShopProfile())
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: HttpException) {
             val message = parseErrorBody(e) ?: "Error al cargar el perfil"
+            Result.failure(Exception(message))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getEarnings(from: String, to: String): Result<ShopEarningsDto> {
+        return try {
+            Result.success(api.getShopEarnings(from, to))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: HttpException) {
+            val message = parseErrorBody(e) ?: "No se pudieron cargar las ganancias"
             Result.failure(Exception(message))
         } catch (e: Exception) {
             Result.failure(e)

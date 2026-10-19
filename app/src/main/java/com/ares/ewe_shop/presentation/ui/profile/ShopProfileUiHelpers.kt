@@ -1,6 +1,6 @@
 package com.ares.ewe_shop.presentation.ui.profile
 
-import com.ares.ewe_shop.BuildConfig
+import com.ares.ewe_shop.core.DevServerStore
 
 /** URL absoluta para Coil; rutas relativas se resuelven contra el host del API. */
 fun resolveShopLogoUrl(logoUrl: String?): String? {
@@ -8,7 +8,7 @@ fun resolveShopLogoUrl(logoUrl: String?): String? {
     if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true)) {
         return raw
     }
-    val origin = BuildConfig.BASE_URL
+    val origin = DevServerStore.baseUrl()
         .trim()
         .trimEnd('/')
         .removeSuffix("/api")

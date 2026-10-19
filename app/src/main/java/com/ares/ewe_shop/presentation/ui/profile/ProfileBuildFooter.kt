@@ -15,9 +15,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ares.ewe_shop.BuildConfig
+import com.ares.ewe_shop.core.DevServerStore
 
 @Composable
 fun ProfileBuildFooter(modifier: Modifier = Modifier) {
+    val serverDialog = rememberDevServerDialogState()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -29,6 +31,23 @@ fun ProfileBuildFooter(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodySmall,
             color = Color(0xFF9CA3AF),
         )
+        if (BuildConfig.ENVIRONMENT == "dev") {
+            TextButton(onClick = { serverDialog.open() }) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Server connection",
+                        color = Color(0xFF8B5CF6),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = DevServerStore.displayHost(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF9CA3AF),
+                    )
+                }
+            }
+            DevServerConnectionDialogs(serverDialog)
+        }
         if (BuildConfig.DEBUG) {
             Spacer(modifier = Modifier.height(4.dp))
             TextButton(

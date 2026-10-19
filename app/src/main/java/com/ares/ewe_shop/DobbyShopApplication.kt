@@ -1,6 +1,8 @@
 package com.ares.ewe_shop
 
 import android.app.Application
+import android.content.Context
+import com.ares.ewe_shop.core.DevServerStore
 import com.ares.ewe_shop.core.crash.CrashlyticsJourney
 import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.session.ProactiveShopAccessTokenRefresh
@@ -17,7 +19,13 @@ class DobbyShopApplication : Application() {
     @Inject
     lateinit var sessionManager: SessionManager
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        DevServerStore.init(base)
+    }
+
     override fun onCreate() {
+        DevServerStore.init(this)
         super.onCreate()
         CrashlyticsJourney.setApp("dobby_shop")
         runBlocking { sessionManager.prepareSession() }

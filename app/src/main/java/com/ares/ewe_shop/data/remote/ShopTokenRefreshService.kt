@@ -1,6 +1,6 @@
 package com.ares.ewe_shop.data.remote
 
-import com.ares.ewe_shop.BuildConfig
+import com.ares.ewe_shop.core.DevServerStore
 import com.ares.ewe_shop.data.local.datastore.SessionManager
 import com.ares.ewe_shop.data.remote.model.ShopRefreshRequest
 import com.ares.ewe_shop.data.remote.model.ShopRefreshResponse
@@ -114,7 +114,7 @@ class ShopTokenRefreshService @Inject constructor(
     }
 
     private fun executeRefresh(refresh: String): HttpRefreshResult {
-        val url = BuildConfig.BASE_URL.trimEnd('/') + "/auth/shop/refresh"
+        val url = DevServerStore.baseUrl().trimEnd('/') + "/auth/shop/refresh"
         val bodyJson = gson.toJson(ShopRefreshRequest(refresh))
         val httpReq = Request.Builder()
             .url(url)

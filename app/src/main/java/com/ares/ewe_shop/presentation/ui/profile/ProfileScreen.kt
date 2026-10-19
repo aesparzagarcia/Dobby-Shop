@@ -37,15 +37,27 @@ import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +79,12 @@ import com.ares.ewe_shop.data.remote.model.ShopProfileDto
 import com.ares.ewe_shop.data.remote.model.ShopProfileWindowMetricsDto
 import com.ares.ewe_shop.presentation.ui.main.LocalMainBottomBarPadding
 import com.ares.ewe_shop.presentation.viewmodel.profile.ShopProfileViewModel
+import com.ares.ewe_shop.presentation.viewmodel.profile.ShopEarningsPeriod
+import java.text.NumberFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
@@ -76,7 +94,16 @@ fun ProfileScreen(
     viewModel: ShopProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) viewModel.loadProfile()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val scroll = rememberScrollState()
+    val serverDialog = rememberDevServerDialogState()
     val bottomBarPadding = LocalMainBottomBarPadding.current
 
     Scaffold(
@@ -114,6 +141,13 @@ fun ProfileScreen(
                     Button(onClick = { viewModel.loadProfile() }) {
                         Text("Reintentar")
                     }
+                    if (com.ares.ewe_shop.BuildConfig.ENVIRONMENT == "dev") {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = { serverDialog.open() }) {
+                            Text("Configurar IP")
+                        }
+                        DevServerConnectionDialogs(serverDialog)
+                    }
                 }
             }
             else -> {
@@ -134,6 +168,13 @@ fun ProfileScreen(
                         ProfileHeader(profile = profile)
                         Spacer(modifier = Modifier.height(20.dp))
                         RestaurantScoreCard(profile = profile)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ShopEarningsCard(
+                            uiState = uiState,
+                            onPeriod = viewModel::selectEarningsPeriod,
+                            onRange = viewModel::setEarningsRange,
+                            onRetry = viewModel::loadEarnings,
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         LevelBenefitsBanner(levelKey = profile.levelKey)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -283,6 +324,180 @@ private fun ProfileHeader(profile: ShopProfileDto) {
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun ShopEarningsCard(
+    uiState: com.ares.ewe_shop.presentation.viewmodel.profile.ShopProfileUiState,
+    onPeriod: (ShopEarningsPeriod) -> Unit,
+    onRange: (LocalDate, LocalDate) -> Unit,
+    onRetry: () -> Unit,
+) {
+    var pickingStart by remember { mutableStateOf(true) }
+    var showPicker by remember { mutableStateOf(false) }
+    val earnings = uiState.earnings
+    val earningsError = uiState.earningsError
+    val money = NumberFormat.getCurrencyInstance(Locale("es", "MX"))
+    val dateLabel = DateTimeFormatter.ofPattern("d MMM", Locale("es", "MX"))
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = DobbyShopColors.CardSurface,
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Ganancias",
+                color = DobbyShopColors.TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = uiState.earningsPeriod == ShopEarningsPeriod.TODAY,
+                    onClick = { onPeriod(ShopEarningsPeriod.TODAY) },
+                    label = { Text("Hoy") },
+                )
+                FilterChip(
+                    selected = uiState.earningsPeriod == ShopEarningsPeriod.WEEK,
+                    onClick = { onPeriod(ShopEarningsPeriod.WEEK) },
+                    label = { Text("Esta semana") },
+                )
+                FilterChip(
+                    selected = uiState.earningsPeriod == ShopEarningsPeriod.RANGE,
+                    onClick = { onPeriod(ShopEarningsPeriod.RANGE) },
+                    label = { Text("Periodo") },
+                )
+            }
+            if (uiState.earningsPeriod == ShopEarningsPeriod.RANGE) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        pickingStart = true
+                        showPicker = true
+                    }) {
+                        Text("Inicio ${uiState.earningsFrom.let(::shortDate).ifBlank { "—" }}")
+                    }
+                    TextButton(onClick = {
+                        pickingStart = false
+                        showPicker = true
+                    }) {
+                        Text("Fin ${uiState.earningsTo.let(::shortDate).ifBlank { "—" }}")
+                    }
+                }
+            } else if (uiState.earningsFrom.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = periodCaption(uiState.earningsFrom, uiState.earningsTo, dateLabel),
+                    color = DobbyShopColors.TextSecondary,
+                    fontSize = 12.sp,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            when {
+                uiState.earningsLoading && earnings == null -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = DobbyShopColors.Primary,
+                    )
+                }
+                earningsError != null && earnings == null -> {
+                    Text(earningsError, color = DobbyShopColors.Red, fontSize = 13.sp)
+                    TextButton(onClick = onRetry) { Text("Reintentar") }
+                }
+                earnings != null -> {
+                    EarningsLine("Pedidos entregados", earnings.orderCount.toString())
+                    EarningsLine("Ganancia", money.format(earnings.shopEarnings))
+                    if (earnings.collectsFullPayment) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        EarningsLine("Cobrado al cliente", money.format(earnings.collectedByShop))
+                        EarningsLine("Tu ganancia", money.format(earnings.shopEarnings))
+                        EarningsLine("Por pagar a Dobbi", money.format(earnings.owedInPeriod))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Saldo pendiente",
+                            color = DobbyShopColors.TextSecondary,
+                            fontSize = 12.sp,
+                        )
+                        Text(
+                            text = money.format(earnings.outstandingOwed),
+                            color = DobbyShopColors.TextPrimary,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "Todo lo entregado, menos lo que Dobbi ya cobró.",
+                            color = DobbyShopColors.TextSecondary,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showPicker) {
+        val initial = (if (pickingStart) uiState.earningsFrom else uiState.earningsTo)
+            .takeIf { it.isNotBlank() }
+            ?.let { LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
+        val state = rememberDatePickerState(initialSelectedDateMillis = initial)
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val millis = state.selectedDateMillis
+                    if (millis != null) {
+                        val picked = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                        val from = if (pickingStart) picked else LocalDate.parse(uiState.earningsFrom.ifBlank { picked.toString() })
+                        val to = if (pickingStart) LocalDate.parse(uiState.earningsTo.ifBlank { picked.toString() }) else picked
+                        onRange(from, to)
+                    }
+                    showPicker = false
+                }) { Text("Listo") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Cancelar") }
+            },
+        ) {
+            DatePicker(state = state)
+        }
+    }
+}
+
+private fun shortDate(iso: String): String {
+    return try {
+        LocalDate.parse(iso).format(DateTimeFormatter.ofPattern("d MMM", Locale("es", "MX")))
+    } catch (_: Exception) {
+        iso
+    }
+}
+
+private fun periodCaption(from: String, to: String, formatter: DateTimeFormatter): String {
+    return try {
+        val start = LocalDate.parse(from).format(formatter)
+        val end = LocalDate.parse(to).format(formatter)
+        if (from == to) start else "$start – $end"
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+@Composable
+private fun EarningsLine(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, color = DobbyShopColors.TextSecondary, fontSize = 14.sp)
+        Text(value, color = DobbyShopColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

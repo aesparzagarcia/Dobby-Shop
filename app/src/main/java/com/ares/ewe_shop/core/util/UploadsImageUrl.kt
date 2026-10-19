@@ -1,9 +1,9 @@
 package com.ares.ewe_shop.core.util
 
-import com.ares.ewe_shop.BuildConfig
+import com.ares.ewe_shop.core.DevServerStore
 
 /** Base del servidor sin `/api/` (imágenes están en `/uploads/...`). */
-fun uploadsOrigin(): String = BuildConfig.BASE_URL.removeSuffix("api/").trimEnd('/')
+fun uploadsOrigin(): String = DevServerStore.baseUrl().removeSuffix("api/").trimEnd('/')
 
 /** Ruta devuelta por el API, p.ej. `/uploads/products/xyz.jpg`. */
 fun absoluteUploadUrl(path: String): String {

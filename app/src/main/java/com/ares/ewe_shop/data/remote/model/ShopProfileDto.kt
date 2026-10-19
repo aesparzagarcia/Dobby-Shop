@@ -62,6 +62,19 @@ data class ShopMissionDto(
     @SerializedName("completed") val completed: Boolean,
 )
 
+data class ShopEarningsDto(
+    @SerializedName("from") val from: String,
+    @SerializedName("to") val to: String,
+    @SerializedName("collectsFullPayment") val collectsFullPayment: Boolean = false,
+    @SerializedName("orderCount") val orderCount: Int = 0,
+    @SerializedName("productsSubtotal") val productsSubtotal: Double = 0.0,
+    @SerializedName("serviceFee") val serviceFee: Double = 0.0,
+    @SerializedName("shopEarnings") val shopEarnings: Double = 0.0,
+    @SerializedName("collectedByShop") val collectedByShop: Double = 0.0,
+    @SerializedName("owedInPeriod") val owedInPeriod: Double = 0.0,
+    @SerializedName("outstandingOwed") val outstandingOwed: Double = 0.0,
+)
+
 data class UpdateShopStatusRequest(
     @SerializedName("status") val status: String,
 )
